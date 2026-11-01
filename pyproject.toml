@@ -34,10 +34,13 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "S", "UP"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["triage_core", "training"]
+
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S101"]
-"notebooks/**" = ["E402", "B018"]
+"notebooks/**" = ["E402", "B018", "S101"]
 
 [tool.pytest.ini_options]
 testpaths = ["backend/triage_core/tests", "training/tests"]
-addopts = "--import-mode=importlib --cov=triage_core --cov=training --cov-report=term-missing"
+addopts = "--cov=triage_core --cov=training --cov-report=term-missing"

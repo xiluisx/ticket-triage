@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "labels": [
+    {"id": "debt_collection", "name": "Debt collection", "description": "Attempts to collect a debt: collection calls or letters, debts the customer says are not theirs or already paid, threats or harassment, requests to validate a debt."},
+    {"id": "bank_accounts", "name": "Bank accounts", "description": "Checking or savings accounts: opening or closing accounts, deposits and withdrawals, overdraft and account fees, frozen accounts, unauthorized transactions on a bank account."},
+    {"id": "cards", "name": "Credit and prepaid cards", "description": "Credit cards or prepaid cards: charges on a statement, card fees and interest, purchase disputes and chargebacks, rewards, card applications or closures."},
+    {"id": "payments_transfers", "name": "Money transfers and digital payments", "description": "Payment apps, wire transfers, digital wallets, virtual currency and money orders: sending or receiving money, missing or fraudulent transfers, access to payment app accounts."},
+    {"id": "mortgage", "name": "Mortgages", "description": "Home loans: applying, servicing and escrow, mortgage payments, loan modification, foreclosure, closing, home equity loans."},
+    {"id": "student_loans", "name": "Student loans", "description": "Federal or private student loans: repayment plans, servicer problems, forgiveness or discharge, payment application, default."},
+    {"id": "consumer_loans", "name": "Auto and personal loans", "description": "Vehicle loans or leases, payday loans, title loans, personal loans and advance loans: payments, repossession, loan terms, fees and interest."},
+    {"id": "credit_reporting", "name": "Credit reports and credit repair", "description": "Errors or disputes on credit reports, identity theft appearing on a credit report, improper use of a report, credit monitoring, credit repair or debt settlement services."}
+  ],
+  "cfpb_product_map": {
+    "Debt collection": "debt_collection",
+    "Checking or savings account": "bank_accounts",
+    "Bank account or service": "bank_accounts",
+    "Credit card": "cards",
+    "Prepaid card": "cards",
+    "Credit card or prepaid card": "cards",
+    "Money transfer, virtual currency, or money service": "payments_transfers",
+    "Mortgage": "mortgage",
+    "Student loan": "student_loans",
+    "Vehicle loan or lease": "consumer_loans",
+    "Payday loan, title loan, personal loan, or advance loan": "consumer_loans",
+    "Payday loan, title loan, or personal loan": "consumer_loans",
+    "Credit reporting or other personal consumer reports": "credit_reporting",
+    "Credit reporting, credit repair services, or other personal consumer reports": "credit_reporting",
+    "Debt or credit management": "credit_reporting"
+  }
+}

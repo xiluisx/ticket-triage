@@ -15,6 +15,7 @@ whoami:           ## Muestra profile, cuenta y ARN activos (revisar antes de cua
 setup:            ## Instala entorno y hooks
 	uv sync
 	uv run pre-commit install
+	uv run python -m ipykernel install --sys-prefix --name ticket-triage --display-name "ticket-triage (.venv)"
 
 lint:
 	uv run ruff check .
