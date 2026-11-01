@@ -12,6 +12,7 @@ Proyecto final de MLOps (AWS + ML). Specs en `docs/superpowers/specs/` (empezar 
 - **Avisar cuando haya que capturar pantalla** para la evidencia del reporte. En cada momento relevante decir:
   - qué capturar (ej. CI en verde, `terraform apply`, recurso en consola AWS, gráfica del EDA, tabla de métricas, Kanban, dashboard)
   - dónde guardarla: `docs/evidence/YYYY-MM-DD-<slug>.png`
+  - `docs/evidence/*.png` está en `.gitignore` (puede mostrar el ID de cuenta): son para el reporte PDF, no para el repo. Gráficas sin datos de la cuenta van en `docs/figures/`.
   - para qué sección del reporte sirve
   - El avance del **4 de noviembre de 2026** requiere evidencia explícita en el reporte.
 

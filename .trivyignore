@@ -1,0 +1,9 @@
+# Accepted findings. Each one needs a justification.
+
+# S3 encryption with a customer-managed KMS key: SSE-S3 (AWS-managed) is enough for public CFPB data
+# and Terraform state; a CMK costs $1/month per key, outside the < $10 total budget.
+AVD-AWS-0132
+
+# SNS encryption with a customer-managed KMS key: the topic already uses the AWS-managed key
+# (alias/aws/sns); alerts carry no sensitive data and a CMK costs $1/month.
+AVD-AWS-0136

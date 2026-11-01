@@ -26,3 +26,6 @@ infra/terraform/backend.hcl
 
 # Claude working docs (specs/plans), local only
 docs/superpowers/
+
+# Report evidence screenshots (may show account ids); used in the PDF, not published
+docs/evidence/*.png
