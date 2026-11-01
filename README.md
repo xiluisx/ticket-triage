@@ -4,6 +4,8 @@ Multi-tenant SaaS that classifies support tickets (email + API) by **category** 
 
 Class project (MLOps, AWS + ML).
 
+- [Architecture](docs/architecture.md)
+
 ## Quickstart
 
 ```bash
