@@ -1,0 +1,21 @@
+<View>
+  <Header value="Complaint"/>
+  <Text name="text" value="$text"/>
+  <Header value="Category (team)"/>
+  <Choices name="category" toName="text" choice="single" required="true">
+    <Choice value="debt_collection" hint="Debt collection: Attempts to collect a debt: collection calls or letters, debts the customer says are not theirs or already paid, threats or harassment, requests to validate a debt."/>
+    <Choice value="bank_accounts" hint="Bank accounts: Checking or savings accounts: opening or closing accounts, deposits and withdrawals, overdraft and account fees, frozen accounts, unauthorized transactions on a bank account."/>
+    <Choice value="cards" hint="Credit and prepaid cards: Credit cards or prepaid cards: charges on a statement, card fees and interest, purchase disputes and chargebacks, rewards, card applications or closures."/>
+    <Choice value="payments_transfers" hint="Money transfers and digital payments: Payment apps, wire transfers, digital wallets, virtual currency and money orders: sending or receiving money, missing or fraudulent transfers, access to payment app accounts."/>
+    <Choice value="mortgage" hint="Mortgages: Home loans: applying, servicing and escrow, mortgage payments, loan modification, foreclosure, closing, home equity loans."/>
+    <Choice value="student_loans" hint="Student loans: Federal or private student loans: repayment plans, servicer problems, forgiveness or discharge, payment application, default."/>
+    <Choice value="consumer_loans" hint="Auto and personal loans: Vehicle loans or leases, payday loans, title loans, personal loans and advance loans: payments, repossession, loan terms, fees and interest."/>
+    <Choice value="credit_reporting" hint="Credit reports and credit repair: Errors or disputes on credit reports, identity theft appearing on a credit report, improper use of a report, credit monitoring, credit repair or debt settlement services."/>
+  </Choices>
+  <Header value="Priority"/>
+  <Choices name="priority" toName="text" choice="single" required="true">
+    <Choice value="P1" hint="Urgent: Active or imminent harm: fraud or identity theft in progress, money being lost or withheld right now, imminent foreclosure, repossession or eviction, legal threats or deadlines within days, harassment."/>
+    <Choice value="P2" hint="Standard: A concrete problem that needs action but no imminent harm: wrong fees or charges, account or payment errors, incorrect information, delayed processing, disputes already in progress."/>
+    <Choice value="P3" hint="Low: Questions, requests for information or documents, general dissatisfaction, feedback, or issues already resolved."/>
+  </Choices>
+</View>

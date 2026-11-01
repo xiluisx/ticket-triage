@@ -5,6 +5,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.0"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.0"
+    }
   }
   backend "s3" {
     key          = "main/terraform.tfstate"
@@ -24,6 +28,9 @@ provider "aws" {
     }
   }
 }
+
+# Reads CLOUDFLARE_API_TOKEN from the environment (exported by the Makefile from .env).
+provider "cloudflare" {}
 
 data "aws_caller_identity" "current" {}
 
