@@ -1,0 +1,12 @@
+{
+  "model": "tfidf_logreg_baseline",
+  "train_rows": 150000,
+  "test_rows": 26823,
+  "macro_f1": 0.8137,
+  "accuracy": 0.8262,
+  "fairness_macro_f1": {
+    "Older American": 0.724,
+    "Servicemember": 0.747,
+    "No tag": 0.819
+  }
+}

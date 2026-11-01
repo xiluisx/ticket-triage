@@ -1,6 +1,7 @@
 import json
 
 import pytest
+
 from triage_core.labels import Label, LabelSet
 
 

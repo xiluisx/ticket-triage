@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "labels": [
+    {"id": "P1", "name": "Urgent", "description": "Active or imminent harm: fraud or identity theft in progress, money being lost or withheld right now, imminent foreclosure, repossession or eviction, legal threats or deadlines within days, harassment."},
+    {"id": "P2", "name": "Standard", "description": "A concrete problem that needs action but no imminent harm: wrong fees or charges, account or payment errors, incorrect information, delayed processing, disputes already in progress."},
+    {"id": "P3", "name": "Low", "description": "Questions, requests for information or documents, general dissatisfaction, feedback, or issues already resolved."}
+  ]
+}
