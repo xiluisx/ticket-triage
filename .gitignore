@@ -1,0 +1,24 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+node_modules/
+dist/
+
+data/
+models/
+logs/
+
+infra/terraform/**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+.env
+.claude/settings.local.json
+
+# Claude working docs (specs/plans), local only
+docs/superpowers/
