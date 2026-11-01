@@ -1,0 +1,43 @@
+[project]
+name = "ticket-triage"
+version = "0.1.0"
+description = "Multi-tenant ticket triage SaaS with a cost-aware ML/LLM cascade"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = ["triage-core", "training"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["backend/triage_core", "training"]
+
+[tool.uv.sources]
+triage-core = { workspace = true }
+training = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29",
+    "jupytext>=1.16",
+    "nbconvert>=7.16",
+    "pre-commit>=4.0",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.8",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "S", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101"]
+"notebooks/**" = ["E402", "B018"]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/triage_core/tests", "training/tests"]
+addopts = "--import-mode=importlib --cov=triage_core --cov=training --cov-report=term-missing"
