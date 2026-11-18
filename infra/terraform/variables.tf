@@ -17,3 +17,13 @@ variable "github_repo" {
   type    = string
   default = "xiluisx/ticket-triage"
 }
+
+variable "cloudflare_zone_id" {
+  type        = string
+  description = "Cloudflare zone id for luisv.dev"
+}
+
+variable "inbound_domain" {
+  type    = string
+  default = "tickets.luisv.dev"
+}

@@ -1,2 +1,3 @@
 aws_account_id = "<12-digit personal account id>"
 alert_email    = "you@example.com"
+cloudflare_zone_id = "<zone id de luisv.dev>"
