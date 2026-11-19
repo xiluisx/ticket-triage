@@ -41,6 +41,70 @@ def sample_golden(
     return out.iloc[out["complaint_id"].astype(int).argsort()].reset_index(drop=True)
 
 
+def subsample_golden(
+    df: pd.DataFrame,
+    labeled: set[str],
+    n: int,
+    category_quotas: dict[str, int],
+    min_per_tag: int,
+    seed: int,
+) -> pd.DataFrame:
+    """Shrink a golden pool to n rows: keep every labeled row, then top up quotas, then fill.
+
+    Labeled rows count toward the per-category and per-tag minimums, so only the
+    shortfall is drawn from unlabeled rows.
+    """
+    if missing := labeled - set(df["complaint_id"]):
+        raise ValueError(f"labeled ids not in pool: {sorted(missing)[:5]}")
+    if len(labeled) > n:
+        raise ValueError(f"{len(labeled)} labeled rows exceed n={n}")
+    if min_per_tag * len(TAG_GROUPS) + sum(category_quotas.values()) > n:
+        raise ValueError(f"Quotas exceed n={n}")
+
+    chosen = df["complaint_id"].isin(labeled)
+
+    def top_up(mask: pd.Series, quota: int) -> None:
+        nonlocal chosen
+        missing = quota - int((mask & chosen).sum())
+        pool = df[mask & ~chosen]
+        if missing > 0:
+            picked = pool.sample(min(missing, len(pool)), random_state=seed)
+            chosen = chosen | df.index.isin(picked.index)
+
+    for tag in TAG_GROUPS:
+        top_up(df["tags"].str.contains(tag), min_per_tag)
+    for category in sorted(category_quotas):
+        top_up(df["category"] == category, category_quotas[category])
+
+    if int(chosen.sum()) > n:
+        raise ValueError(f"Quotas plus labeled rows exceed n={n}")
+    rest = df[~chosen].sample(n - int(chosen.sum()), random_state=seed)
+    out = df[chosen | df.index.isin(rest.index)]
+    return out.iloc[out["complaint_id"].astype(int).argsort()].reset_index(drop=True)
+
+
+def merge_annotations(
+    pool_tasks: list[dict], exported: list[dict], selected: list[str]
+) -> list[dict]:
+    """Build Label Studio import tasks for the selected ids, carrying over finished annotations."""
+    results = {}
+    for task in exported:
+        done = [a for a in task.get("annotations", []) if not a.get("was_cancelled")]
+        if done:
+            results[task["data"]["complaint_id"]] = done[-1]["result"]
+    wanted = set(selected)
+    out = []
+    for task in pool_tasks:
+        cid = task["data"]["complaint_id"]
+        if cid not in wanted:
+            continue
+        new = {"data": task["data"]}
+        if cid in results:
+            new["annotations"] = [{"result": results[cid]}]
+        out.append(new)
+    return sorted(out, key=lambda t: int(t["data"]["complaint_id"]))
+
+
 def _choices(name: str, labels: LabelSet) -> str:
     items = "\n".join(
         f'    <Choice value="{escape(lb.id)}" hint="{escape(lb.name)}: {escape(lb.description)}"/>'
