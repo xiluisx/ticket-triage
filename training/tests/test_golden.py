@@ -1,7 +1,13 @@
 import pandas as pd
 import pytest
 
-from training.golden import export_annotations, label_studio_config, sample_golden
+from training.golden import (
+    export_annotations,
+    label_studio_config,
+    merge_annotations,
+    sample_golden,
+    subsample_golden,
+)
 from triage_core.labels import Label, LabelSet
 
 CATS = LabelSet((Label("a", "A", "cat a"), Label("b", "B", "cat b"), Label("c", "C", "cat c")))
@@ -103,3 +109,66 @@ def test_export_skips_unfinished_and_cancelled():
 def test_export_rejects_unknown_label():
     with pytest.raises(ValueError, match="unknown"):
         export_annotations([ls_task("1", "zzz", "P1")], CATS, PRIOS)
+
+
+QUOTAS = {"a": 10, "b": 10, "c": 15}
+
+
+def test_subsample_keeps_labeled_and_meets_quotas():
+    df = frame()
+    keep = {"2", "4", "5", "7"}
+    out = subsample_golden(df, keep, n=60, category_quotas=QUOTAS, min_per_tag=8, seed=1)
+    assert len(out) == 60
+    assert out["complaint_id"].is_unique
+    assert keep <= set(out["complaint_id"])
+    counts = out["category"].value_counts()
+    assert all(counts[c] >= q for c, q in QUOTAS.items())
+    assert out["tags"].str.contains("Older American").sum() >= 8
+    assert out["tags"].str.contains("Servicemember").sum() >= 8
+
+
+def test_subsample_counts_labeled_toward_quotas():
+    df = frame()
+    keep = set(df.loc[df["category"] == "c", "complaint_id"][:15])
+    out = subsample_golden(df, keep, n=60, category_quotas=QUOTAS, min_per_tag=8, seed=1)
+    assert keep <= set(out["complaint_id"])
+    assert len(out) == 60
+
+
+def test_subsample_is_deterministic():
+    args = dict(n=60, category_quotas=QUOTAS, min_per_tag=8, seed=1)
+    a = subsample_golden(frame(), {"3"}, **args)
+    b = subsample_golden(frame(), {"3"}, **args)
+    assert a["complaint_id"].tolist() == b["complaint_id"].tolist()
+
+
+def test_subsample_rejects_more_labeled_than_n():
+    with pytest.raises(ValueError, match="labeled"):
+        subsample_golden(frame(), {str(i) for i in range(61)}, 60, QUOTAS, 8, 1)
+
+
+def test_subsample_rejects_unknown_labeled_id():
+    with pytest.raises(ValueError, match="not in pool"):
+        subsample_golden(frame(), {"nope"}, 60, QUOTAS, 8, 1)
+
+
+def test_subsample_rejects_quotas_larger_than_n():
+    with pytest.raises(ValueError, match="Quotas"):
+        subsample_golden(frame(), set(), 30, QUOTAS, 8, 1)
+
+
+def test_merge_annotations_attaches_results_to_selected_tasks():
+    pool = [ls_task(cid, None, None) for cid in ["1", "2", "3"]]
+    for t in pool:
+        del t["annotations"]
+    exported = [ls_task("2", "b", "P2"), ls_task("9", "a", "P1")]
+    out = merge_annotations(pool, exported, ["3", "2"])
+    assert [t["data"]["complaint_id"] for t in out] == ["2", "3"]
+    assert out[0]["annotations"] == [{"result": exported[0]["annotations"][0]["result"]}]
+    assert "annotations" not in out[1]
+
+
+def test_merge_annotations_ignores_cancelled():
+    pool = [{"data": {"complaint_id": "1", "text": "t", "product": "P"}}]
+    out = merge_annotations(pool, [ls_task("1", "a", "P1", cancelled=True)], ["1"])
+    assert "annotations" not in out[0]

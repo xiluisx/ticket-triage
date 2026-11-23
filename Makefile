@@ -6,7 +6,7 @@ export AWS_PROFILE AWS_REGION CLOUDFLARE_API_TOKEN
 TF_MAIN := infra/terraform
 DATA_BUCKET = $(shell terraform -chdir=$(TF_MAIN) output -raw data_bucket)
 
-.PHONY: whoami setup lint format test tf-bootstrap tf-init tf-plan tf-apply data data-upload notebooks smoke labelstudio golden-sample golden-export
+.PHONY: whoami setup lint format test tf-bootstrap tf-init tf-plan tf-apply data data-upload notebooks smoke labelstudio golden-sample golden-subsample golden-export
 
 whoami:           ## Muestra profile, cuenta y ARN activos (revisar antes de cualquier apply)
 	@echo "AWS_PROFILE=$(AWS_PROFILE)"
@@ -60,6 +60,9 @@ labelstudio:
 
 golden-sample:
 	uv run python labeling/sample.py
+
+golden-subsample: ## Reduce el golden set a 100 conservando lo ya etiquetado
+	uv run python labeling/subsample.py
 
 golden-export:
 	uv run python labeling/export.py
