@@ -88,3 +88,9 @@ def test_cache_key_depends_on_model_and_prompt():
     b = ClaudeClassifier(FakeClient(None), "anthropic.other", "Which team?", (1, 1))
     c = make(FakeClient(None), with_rationale=True)
     assert len({a.cache_key, b.cache_key, c.cache_key}) == 3
+
+
+def test_long_text_is_truncated():
+    client = FakeClient(response({"label": "a"}))
+    make(client, max_chars=5).predict(["0123456789"], LABELS)
+    assert "<complaint>\n01234\n</complaint>" in client.calls[0]["messages"][0]["content"]

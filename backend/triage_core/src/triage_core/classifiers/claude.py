@@ -1,6 +1,6 @@
 """Claude classifier over the Messages API with structured outputs.
 
-`client` is injected (an `anthropic.AnthropicBedrockMantle` in practice), so triage_core has no
+`client` is injected (an `anthropic.AnthropicBedrock` in practice), so triage_core has no
 SDK dependency. Retries for 429/5xx are handled by the SDK client (`max_retries`).
 """
 
@@ -30,6 +30,7 @@ class ClaudeClassifier:
         usd_per_mtok: tuple[float, float],
         with_rationale: bool = False,
         request_options: dict | None = None,
+        max_chars: int = 8000,
     ):
         self.client = client
         self.model_id = model_id
@@ -37,14 +38,19 @@ class ClaudeClassifier:
         self.usd_per_mtok = usd_per_mtok
         self.with_rationale = with_rationale
         self.request_options = request_options or {}
+        self.max_chars = max_chars
         self.cache_key = "claude-" + short_hash(
-            [model_id, SYSTEM_HEADER, instructions, with_rationale, self.request_options]
+            [model_id, SYSTEM_HEADER, instructions, with_rationale, self.request_options, max_chars]
         )
 
     def system_prompt(self, labels: LabelSet) -> str:
         lines = [SYSTEM_HEADER, "", self.instructions, "", "Labels:"]
         lines += [f"- {lb.id}: {lb.description}" for lb in labels.labels]
         return "\n".join(lines)
+
+    def user_message(self, text: str) -> str:
+        """Complaint wrapped as untrusted input; capped at max_chars (affects ~3% of CFPB)."""
+        return f"<complaint>\n{text[: self.max_chars]}\n</complaint>"
 
     def schema(self, labels: LabelSet) -> dict:
         properties: dict = {"label": {"type": "string", "enum": list(labels.ids)}}
@@ -73,7 +79,7 @@ class ClaudeClassifier:
             model=self.model_id,
             max_tokens=512 if self.with_rationale else 128,
             system=self.system_prompt(labels),
-            messages=[{"role": "user", "content": f"<complaint>\n{text}\n</complaint>"}],
+            messages=[{"role": "user", "content": self.user_message(text)}],
             output_config=output_config,
             **options,
         )

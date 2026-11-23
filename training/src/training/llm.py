@@ -12,7 +12,7 @@ from triage_core.classifiers.claude import ClaudeClassifier
 from triage_core.classifiers.jev import JEV_URL, JevClassifier
 
 REGION = "us-east-1"
-DEFAULT_CLAUDE_MODEL = "anthropic.claude-haiku-5-5"
+DEFAULT_CLAUDE_MODEL = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 
 # USD per million tokens (input, output). First-party rates; check the Bedrock pricing page
 # and update if Bedrock differs.
@@ -56,10 +56,10 @@ def estimate_claude_usd(texts: list[str], model_id: str) -> float:
 
 
 def claude_classifier(task: str, with_rationale: bool = False) -> ClaudeClassifier:
-    from anthropic import AnthropicBedrockMantle
+    from anthropic import AnthropicBedrock
 
     model_id = claude_model_id()
-    client = AnthropicBedrockMantle(aws_region=REGION, max_retries=5)
+    client = AnthropicBedrock(aws_region=REGION, max_retries=5)
     return ClaudeClassifier(
         client,
         model_id,

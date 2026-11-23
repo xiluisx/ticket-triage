@@ -1,4 +1,4 @@
-"""Smoke test: Claude on Bedrock via the Anthropic SDK (Mantle) with structured outputs.
+"""Smoke test: Claude on Bedrock via the Anthropic SDK (AnthropicBedrock) with structured outputs.
 
 One call on a synthetic complaint (~$0.0001). Exits non-zero on failure.
 """
