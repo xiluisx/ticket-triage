@@ -106,3 +106,27 @@ def test_latest_artifact_prefers_new_format_over_legacy(tmp_path):
     _fake_version(tmp_path, "priority", "v20261123-3c155e3")
     new = _fake_version(tmp_path, "priority", "v20261124T000000Z-aaa0000", "2026-11-24T00:00:00Z")
     assert latest_artifact("priority", root=tmp_path) == new
+
+
+def test_save_artifact_crash_leaves_no_version_and_retry_works(tmp_path, monkeypatch):
+    texts, y = data()
+    model = build_pipeline("svc", "sigmoid", n_features=2**10).fit(texts, y)
+    version = "v20261125T143012Z-abc1234"
+
+    def boom(*args, **kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr("training.train.joblib.dump", boom)
+    with pytest.raises(OSError, match="disk full"):
+        save_artifact(model, "category", LABELS, {}, version, root=tmp_path)
+    assert not (tmp_path / "category" / version).exists()
+    monkeypatch.undo()
+    path = save_artifact(model, "category", LABELS, {}, version, root=tmp_path)
+    assert (path / "metadata.json").exists()
+    assert [p.name for p in (tmp_path / "category").iterdir()] == [version]
+
+
+def test_latest_artifact_ignores_hidden_staging_dirs(tmp_path):
+    _fake_version(tmp_path, "priority", "v20261125T100000Z-fff0000", "2026-11-25T10:00:00Z")
+    _fake_version(tmp_path, "priority", ".v20261126T100000Z-aaa0000.tmp", "2026-11-26T10:00:00Z")
+    assert latest_artifact("priority", root=tmp_path).name == "v20261125T100000Z-fff0000"

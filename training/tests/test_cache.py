@@ -75,9 +75,9 @@ def test_cache_for_separates_label_sets(tmp_path):
     assert a.path.name == f"fake-1-{LABELS.labels_hash()}.jsonl"
 
 
-def test_cache_for_migrates_legacy_file(tmp_path):
+def test_cache_for_ignores_legacy_file_without_labels_hash(tmp_path):
     legacy = PredictionCache(tmp_path / "fake-1.jsonl")
     legacy.put("1", Prediction("a", {"a": 1.0}))
     cache = cache_for(Counting(), LABELS, root=tmp_path)
-    assert "1" in cache
-    assert not (tmp_path / "fake-1.jsonl").exists()
+    assert "1" not in cache
+    assert (tmp_path / "fake-1.jsonl").exists()

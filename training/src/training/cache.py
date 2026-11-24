@@ -52,12 +52,7 @@ class PredictionCache:
 
 def cache_for(clf: Classifier, labels: LabelSet, root: Path = CACHE) -> PredictionCache:
     """One cache file per classifier config and label set (labels change prompts and criteria)."""
-    path = root / f"{clf.cache_key}-{labels.labels_hash()}.jsonl"
-    legacy = root / f"{clf.cache_key}.jsonl"
-    if not path.exists() and legacy.exists():
-        # Pre-2026-11-23 files had no labels hash; they were built with the current label files.
-        legacy.rename(path)
-    return PredictionCache(path)
+    return PredictionCache(root / f"{clf.cache_key}-{labels.labels_hash()}.jsonl")
 
 
 def predict_cached(

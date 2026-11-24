@@ -91,3 +91,10 @@ def test_cache_key_keeps_legacy_value_at_t1_and_changes_with_temperature():
     hot = make(FakePost([]), temperature=4.0)
     assert base.cache_key == same.cache_key
     assert hot.cache_key != base.cache_key
+
+
+def test_cache_key_treats_int_and_float_temperature_alike():
+    assert (
+        make(FakePost([]), temperature=4).cache_key == make(FakePost([]), temperature=4.0).cache_key
+    )
+    assert make(FakePost([]), temperature=1).cache_key == make(FakePost([])).cache_key

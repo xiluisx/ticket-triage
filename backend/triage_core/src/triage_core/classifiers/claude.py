@@ -95,6 +95,8 @@ class ClaudeClassifier:
             data = json.loads(text)
         except json.JSONDecodeError as err:
             raise InvalidLabelError(f"Claude returned invalid JSON: {err}") from err
+        if not isinstance(data, dict):
+            raise InvalidLabelError(f"Claude answer is not a JSON object: {text[:80]!r}")
         label = data.get("label")
         if label not in labels.ids:
             raise InvalidLabelError(f"Claude answered {label!r}")

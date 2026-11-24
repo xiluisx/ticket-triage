@@ -40,7 +40,7 @@ class JevClassifier:
         key_parts: list = [JEV_MODEL, instructions, max_chars]
         if temperature != 1.0:
             # Cached probs are post-temperature; T=1 keeps the legacy key (existing paid caches).
-            key_parts.append(temperature)
+            key_parts.append(float(temperature))
         self.cache_key = "jev-" + short_hash(key_parts)
 
     def predict(self, texts: list[str], labels: LabelSet) -> list[Prediction]:

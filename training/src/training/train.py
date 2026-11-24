@@ -9,6 +9,7 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
+import shutil
 import subprocess  # noqa: S404 - fixed git command
 import sys
 from pathlib import Path
@@ -126,19 +127,34 @@ def save_artifact(
     root: Path = MODELS,
     created_at: str | None = None,
 ) -> Path:
-    """Write an immutable versioned artifact; an existing version is never overwritten."""
+    """Write an immutable versioned artifact; an existing version is never overwritten.
+
+    Files go to a hidden staging dir that is renamed into place last, so a crash never
+    leaves a half-written version behind.
+    """
     path = root / task / version
-    path.mkdir(parents=True, exist_ok=False)
-    joblib.dump(model, path / "model.joblib")
-    meta = {
-        "task": task,
-        "version": version,
-        "labels_hash": labels.labels_hash(),
-        "created_at": created_at or f"{utc_now():%Y-%m-%dT%H:%M:%SZ}",
-        "artifact_sha256": file_sha256(path / "model.joblib"),
-        **metadata,
-    }
-    write_json(path / "metadata.json", meta)
+    if path.exists():
+        raise FileExistsError(path)
+    staging = root / task / f".{version}.tmp"
+    shutil.rmtree(staging, ignore_errors=True)
+    staging.mkdir(parents=True)
+    try:
+        joblib.dump(model, staging / "model.joblib")
+        meta = {
+            "task": task,
+            "version": version,
+            "labels_hash": labels.labels_hash(),
+            "created_at": created_at or f"{utc_now():%Y-%m-%dT%H:%M:%SZ}",
+            "artifact_sha256": file_sha256(staging / "model.joblib"),
+            **metadata,
+        }
+        write_json(staging / "metadata.json", meta)
+        try:
+            staging.rename(path)
+        except OSError as err:
+            raise FileExistsError(path) from err
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
     return path
 
 
@@ -151,7 +167,7 @@ def _created_at(path: Path) -> str:
 
 def latest_artifact(task: str, root: Path = MODELS) -> Path:
     """Newest version by metadata created_at; legacy versions without it sort first, by name."""
-    versions = [p for p in (root / task).iterdir() if p.is_dir()]
+    versions = [p for p in (root / task).iterdir() if p.is_dir() and not p.name.startswith(".")]
     if not versions:
         raise FileNotFoundError(f"no artifacts under {root / task}")
     return max(versions, key=lambda p: (_created_at(p), p.name))

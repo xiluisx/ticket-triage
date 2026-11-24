@@ -120,3 +120,14 @@ def test_invalid_json_raises_invalid_label():
     )
     with pytest.raises(InvalidLabelError, match="invalid JSON"):
         make(FakeClient(resp)).predict(["x"], LABELS)
+
+
+@pytest.mark.parametrize("text", ["null", "[]", '"a"', "1"])
+def test_non_object_json_raises_invalid_label(text):
+    resp = SimpleNamespace(
+        stop_reason="end_turn",
+        content=[SimpleNamespace(type="text", text=text)],
+        usage=SimpleNamespace(input_tokens=1, output_tokens=1),
+    )
+    with pytest.raises(InvalidLabelError, match="not a JSON object"):
+        make(FakeClient(resp)).predict(["x"], LABELS)
