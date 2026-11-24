@@ -63,7 +63,7 @@ def kappa_report(human: list[str], model: list[str]) -> dict:
 def gate(assume_yes: bool) -> None:
     rows = read_jsonl(GOLDEN_V2)
     clf = claude_classifier("priority")
-    cache = cache_for(clf)
+    cache = cache_for(clf, labels_for("priority"))
     ids = [r["complaint_id"] for r in rows]
     texts = [r["text"] for r in rows]
     missing = [t for cid, t in zip(ids, texts, strict=True) if cid not in cache]
@@ -110,7 +110,7 @@ def run(assume_yes: bool, workers: int) -> None:
         split=sample["split"].to_numpy()
     )
     clf = claude_classifier("priority")
-    cache = cache_for(clf)
+    cache = cache_for(clf, labels_for("priority"))
     ids = frame["complaint_id"].tolist()
     texts = frame["text"].tolist()
     missing = [t for cid, t in zip(ids, texts, strict=True) if cid not in cache]

@@ -73,7 +73,8 @@ def main(assume_yes: bool) -> None:
             clf = classifiers[task][name]
             if clf is None:
                 continue
-            missing_ids = set(cache_for(clf).missing(frame["complaint_id"].tolist()))
+            cache = cache_for(clf, labels_for(task))
+            missing_ids = set(cache.missing(frame["complaint_id"].tolist()))
             texts = frame.loc[frame["complaint_id"].isin(missing_ids), "text"].tolist()
             calls += len(texts)
             if name == "claude":
@@ -88,7 +89,7 @@ def main(assume_yes: bool) -> None:
                 continue
             preds = predict_cached(
                 clf,
-                cache_for(clf),
+                cache_for(clf, labels_for(task)),
                 frame["complaint_id"].tolist(),
                 frame["text"].tolist(),
                 labels_for(task),

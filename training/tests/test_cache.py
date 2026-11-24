@@ -1,6 +1,6 @@
 import pytest
 
-from training.cache import PredictionCache, RunFailedError, confirm_cost, predict_cached
+from training.cache import PredictionCache, RunFailedError, cache_for, confirm_cost, predict_cached
 from training.jsonl import read_jsonl
 from triage_core.classify import Prediction
 from triage_core.labels import Label, LabelSet
@@ -62,3 +62,22 @@ def test_confirm_cost_aborts_without_yes():
     confirm_cost(10, 0.5, input_fn=lambda _: "y")
     confirm_cost(10, 0.5, assume_yes=True, input_fn=lambda _: pytest.fail("asked"))
     confirm_cost(0, 0.0, input_fn=lambda _: pytest.fail("asked"))
+
+
+OTHER = LabelSet((Label("a", "A", "a"), Label("b", "B", "changed description")))
+
+
+def test_cache_for_separates_label_sets(tmp_path):
+    clf = Counting()
+    a = cache_for(clf, LABELS, root=tmp_path)
+    b = cache_for(clf, OTHER, root=tmp_path)
+    assert a.path != b.path
+    assert a.path.name == f"fake-1-{LABELS.labels_hash()}.jsonl"
+
+
+def test_cache_for_migrates_legacy_file(tmp_path):
+    legacy = PredictionCache(tmp_path / "fake-1.jsonl")
+    legacy.put("1", Prediction("a", {"a": 1.0}))
+    cache = cache_for(Counting(), LABELS, root=tmp_path)
+    assert "1" in cache
+    assert not (tmp_path / "fake-1.jsonl").exists()
