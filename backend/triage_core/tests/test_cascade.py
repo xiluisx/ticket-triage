@@ -51,11 +51,21 @@ def test_cost_accumulates_across_levels():
     assert p.cost_usd == pytest.approx(0.0011)
 
 
-def test_stale_level_is_skipped():
+def test_stale_level_is_skipped_and_recorded(caplog):
     classic = Fixed("classic", {}, stale=True)
     claude = Fixed("claude", {"x": ("urgent", 1.0)})
-    [p] = Cascade([(classic, LevelThresholds(0.5)), (claude, None)]).predict(["x"], LABELS)
+    with caplog.at_level("WARNING", logger="triage_core.cascade"):
+        [p] = Cascade([(classic, LevelThresholds(0.5)), (claude, None)]).predict(["x"], LABELS)
     assert p.level == "claude"
+    assert p.skipped == ("classic:stale",)
+    assert "classic" in caplog.text
+
+
+def test_no_skips_recorded_on_normal_path():
+    classic = Fixed("classic", {"x": ("urgent", 0.95)})
+    claude = Fixed("claude", {})
+    [p] = Cascade([(classic, LevelThresholds(0.9)), (claude, None)]).predict(["x"], LABELS)
+    assert p.skipped == ()
 
 
 def test_last_level_must_accept_everything():

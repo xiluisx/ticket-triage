@@ -18,6 +18,11 @@ class Prediction:
     level: str | None = None
     cost_usd: float = 0.0
     latency_ms: float = 0.0
+    skipped: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        # JSON round-trips (caches, preds files) give a list; keep equality stable.
+        object.__setattr__(self, "skipped", tuple(self.skipped))
 
     @property
     def confidence(self) -> float:

@@ -6,10 +6,13 @@ confidence than `urgent` to be accepted early (safety over cost).
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field, replace
 
 from triage_core.classify import Classifier, Prediction, StaleModelError
 from triage_core.labels import LabelSet
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -39,13 +42,17 @@ class Cascade:
         results: list[Prediction | None] = [None] * len(texts)
         spent = [0.0] * len(texts)
         waited = [0.0] * len(texts)
+        skipped: list[list[str]] = [[] for _ in texts]
         pending = list(range(len(texts)))
         for clf, thresholds in self.levels:
             if not pending:
                 break
             try:
                 preds = clf.predict([texts[i] for i in pending], labels)
-            except StaleModelError:
+            except StaleModelError as err:
+                logger.warning("cascade level %s skipped (stale model): %s", clf.name, err)
+                for i in pending:
+                    skipped[i].append(f"{clf.name}:stale")
                 continue
             still = []
             for i, pred in zip(pending, preds, strict=True):
@@ -53,7 +60,11 @@ class Cascade:
                 waited[i] += pred.latency_ms
                 if thresholds is None or pred.confidence >= thresholds.threshold(pred.label):
                     results[i] = replace(
-                        pred, level=clf.name, cost_usd=spent[i], latency_ms=waited[i]
+                        pred,
+                        level=clf.name,
+                        cost_usd=spent[i],
+                        latency_ms=waited[i],
+                        skipped=tuple(skipped[i]),
                     )
                 else:
                     still.append(i)
