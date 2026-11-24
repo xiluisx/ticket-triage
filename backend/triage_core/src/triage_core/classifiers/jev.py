@@ -37,7 +37,11 @@ class JevClassifier:
         self.temperature = temperature
         self.max_chars = max_chars
         self.sleep = sleep
-        self.cache_key = "jev-" + short_hash([JEV_MODEL, instructions, max_chars])
+        key_parts: list = [JEV_MODEL, instructions, max_chars]
+        if temperature != 1.0:
+            # Cached probs are post-temperature; T=1 keeps the legacy key (existing paid caches).
+            key_parts.append(float(temperature))
+        self.cache_key = "jev-" + short_hash(key_parts)
 
     def predict(self, texts: list[str], labels: LabelSet) -> list[Prediction]:
         return [self._one(text, labels) for text in texts]

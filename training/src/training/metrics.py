@@ -16,12 +16,22 @@ def macro_f1(y_true: Sequence[str], y_pred: Sequence[str], labels: Sequence[str]
     return float(f1_score(y_true, y_pred, labels=list(labels), average="macro", zero_division=0))
 
 
+def macro_f1_present(y_true: Sequence[str], y_pred: Sequence[str]) -> float:
+    """Macro-F1 averaged only over classes present in y_true (fair for small groups)."""
+    present = sorted(set(np.asarray(y_true).tolist()))
+    return macro_f1(y_true, y_pred, present)
+
+
 def accuracy(y_true: Sequence[str], y_pred: Sequence[str]) -> float:
     return float(np.mean(np.asarray(y_true) == np.asarray(y_pred)))
 
 
 def recall_of(label: str) -> Metric:
+    """Recall of one label; NaN when y_true has no positives (undefined, not 0)."""
+
     def metric(y_true, y_pred) -> float:
+        if not np.any(np.asarray(y_true) == label):
+            return float("nan")
         return float(recall_score(y_true, y_pred, labels=[label], average="macro", zero_division=0))
 
     return metric
@@ -55,7 +65,9 @@ def bootstrap_ci(
     rng = np.random.default_rng(seed)
     idx = rng.integers(0, len(y_true), size=(n_boot, len(y_true)))
     values = [metric(y_true[i], y_pred[i]) for i in idx]
-    lo, hi = np.percentile(values, [100 * alpha / 2, 100 * (1 - alpha / 2)])
+    if np.all(np.isnan(values)):
+        return float("nan"), float("nan")
+    lo, hi = np.nanpercentile(values, [100 * alpha / 2, 100 * (1 - alpha / 2)])
     return float(lo), float(hi)
 
 

@@ -18,3 +18,10 @@ def write_jsonl(path: Path, rows: Iterable[dict]) -> None:
     path.write_text(
         "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8"
     )
+
+
+def write_json(path: Path, obj) -> None:
+    """Pretty JSON with a trailing newline (the end-of-file-fixer hook rejects files without it)."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(obj, indent=2) + "\n", encoding="utf-8")

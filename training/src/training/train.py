@@ -7,7 +7,9 @@ python -m training.train priority   # ~1.6k Claude labels, sigmoid calibration
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
+import shutil
 import subprocess  # noqa: S404 - fixed git command
 import sys
 from pathlib import Path
@@ -20,7 +22,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
 
-from training.jsonl import read_jsonl
+from training.jsonl import read_jsonl, write_json
 from training.metrics import ece, macro_f1
 from training.paths import DISTILLED, MODELS
 from training.splits import load_meta, read_ids, with_text
@@ -82,7 +84,7 @@ def fit_select(
 
 def git_sha() -> str:
     out = subprocess.run(  # noqa: S603
-        ["git", "rev-parse", "--short", "HEAD"],  # noqa: S607
+        ["git", "rev-parse", "--short=7", "HEAD"],  # noqa: S607
         capture_output=True,
         text=True,
         check=True,
@@ -90,26 +92,85 @@ def git_sha() -> str:
     return out.stdout.strip()
 
 
-def version_tag(sha: str, today: dt.date | None = None) -> str:
-    return f"v{(today or dt.date.today()):%Y%m%d}-{sha}"
+def git_dirty() -> bool:
+    out = subprocess.run(  # noqa: S603
+        ["git", "status", "--porcelain", "--untracked-files=no"],  # noqa: S607
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return bool(out.stdout.strip())
+
+
+def utc_now() -> dt.datetime:
+    return dt.datetime.now(dt.UTC).replace(microsecond=0)
+
+
+def version_tag(sha: str, now: dt.datetime | None = None) -> str:
+    return f"v{(now or utc_now()):%Y%m%dT%H%M%SZ}-{sha}"
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def save_artifact(
-    model, task: str, labels: LabelSet, metadata: dict, version: str, root: Path = MODELS
+    model,
+    task: str,
+    labels: LabelSet,
+    metadata: dict,
+    version: str,
+    root: Path = MODELS,
+    created_at: str | None = None,
 ) -> Path:
+    """Write an immutable versioned artifact; an existing version is never overwritten.
+
+    Files go to a hidden staging dir that is renamed into place last, so a crash never
+    leaves a half-written version behind.
+    """
     path = root / task / version
-    path.mkdir(parents=True, exist_ok=True)
-    joblib.dump(model, path / "model.joblib")
-    meta = {"task": task, "version": version, "labels_hash": labels.labels_hash(), **metadata}
-    (path / "metadata.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    if path.exists():
+        raise FileExistsError(path)
+    staging = root / task / f".{version}.tmp"
+    shutil.rmtree(staging, ignore_errors=True)
+    staging.mkdir(parents=True)
+    try:
+        joblib.dump(model, staging / "model.joblib")
+        meta = {
+            "task": task,
+            "version": version,
+            "labels_hash": labels.labels_hash(),
+            "created_at": created_at or f"{utc_now():%Y-%m-%dT%H:%M:%SZ}",
+            "artifact_sha256": file_sha256(staging / "model.joblib"),
+            **metadata,
+        }
+        write_json(staging / "metadata.json", meta)
+        try:
+            staging.rename(path)
+        except OSError as err:
+            raise FileExistsError(path) from err
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
     return path
 
 
+def _created_at(path: Path) -> str:
+    meta = path / "metadata.json"
+    if not meta.exists():
+        return ""
+    return json.loads(meta.read_text(encoding="utf-8")).get("created_at", "")
+
+
 def latest_artifact(task: str, root: Path = MODELS) -> Path:
-    versions = sorted(p for p in (root / task).iterdir() if p.is_dir())
+    """Newest version by metadata created_at; legacy versions without it sort first, by name."""
+    versions = [p for p in (root / task).iterdir() if p.is_dir() and not p.name.startswith(".")]
     if not versions:
         raise FileNotFoundError(f"no artifacts under {root / task}")
-    return versions[-1]
+    return max(versions, key=lambda p: (_created_at(p), p.name))
 
 
 def load_classic(path: Path) -> ClassicClassifier:
@@ -146,6 +207,8 @@ def main(task: str) -> None:
         val["label"].tolist(),
         CALIBRATION[task],
     )
+    now = utc_now()
+    sha = git_sha()
     path = save_artifact(
         model,
         task,
@@ -159,8 +222,11 @@ def main(task: str) -> None:
             "val": results[best],
             "candidates": results,
             "label_source": "cfpb_product_map" if task == "category" else "claude_distilled",
+            "git_sha": sha,
+            "git_dirty": git_dirty(),
         },
-        version_tag(git_sha()),
+        version_tag(sha, now),
+        created_at=f"{now:%Y-%m-%dT%H:%M:%SZ}",
     )
     print(f"best={best} → {path}")
 

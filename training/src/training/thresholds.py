@@ -9,7 +9,6 @@ python -m training.thresholds category|priority
 from __future__ import annotations
 
 import itertools
-import json
 import sys
 from collections.abc import Callable
 
@@ -20,6 +19,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 from training.evalsets import load_eval  # noqa: E402
+from training.jsonl import write_json  # noqa: E402
 from training.metrics import ece, macro_f1, probs_matrix, recall_of  # noqa: E402
 from training.paths import FIGURES, REPORTS  # noqa: E402
 from training.predict import model_preds  # noqa: E402
@@ -166,11 +166,8 @@ def main(task: str) -> None:
         "val_rows": len(keep),
     }
     artifact = latest_artifact(task)
-    (artifact / "thresholds.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
-    REPORTS.mkdir(exist_ok=True)
-    (REPORTS / f"cascade_{task}.json").write_text(
-        json.dumps({"chosen": best, "config": config, "sweep": rows}, indent=2), encoding="utf-8"
-    )
+    write_json(artifact / "thresholds.json", config)
+    write_json(REPORTS / f"cascade_{task}.json", {"chosen": best, "config": config, "sweep": rows})
 
     FIGURES.mkdir(parents=True, exist_ok=True)
     fig, ax = plt.subplots(figsize=(7, 4.5))

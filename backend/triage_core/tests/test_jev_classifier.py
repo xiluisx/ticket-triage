@@ -83,3 +83,18 @@ def test_cache_key_changes_with_instructions():
     b = JevClassifier(FakePost([]), "Q2", usd_per_call=0)
     assert a.cache_key != b.cache_key
     assert a.cache_key.startswith("jev-")
+
+
+def test_cache_key_keeps_legacy_value_at_t1_and_changes_with_temperature():
+    base = make(FakePost([]))
+    same = make(FakePost([]), temperature=1.0)
+    hot = make(FakePost([]), temperature=4.0)
+    assert base.cache_key == same.cache_key
+    assert hot.cache_key != base.cache_key
+
+
+def test_cache_key_treats_int_and_float_temperature_alike():
+    assert (
+        make(FakePost([]), temperature=4).cache_key == make(FakePost([]), temperature=4.0).cache_key
+    )
+    assert make(FakePost([]), temperature=1).cache_key == make(FakePost([])).cache_key

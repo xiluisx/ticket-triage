@@ -94,3 +94,40 @@ def test_long_text_is_truncated():
     client = FakeClient(response({"label": "a"}))
     make(client, max_chars=5).predict(["0123456789"], LABELS)
     assert "<complaint>\n01234\n</complaint>" in client.calls[0]["messages"][0]["content"]
+
+
+def test_max_tokens_raises_invalid_label():
+    client = FakeClient(response({"label": "a"}, stop_reason="max_tokens"))
+    with pytest.raises(InvalidLabelError, match="max_tokens"):
+        make(client).predict(["x"], LABELS)
+
+
+def test_no_text_block_raises_invalid_label():
+    resp = SimpleNamespace(
+        stop_reason="end_turn",
+        content=[SimpleNamespace(type="thinking", thinking="...")],
+        usage=SimpleNamespace(input_tokens=1, output_tokens=1),
+    )
+    with pytest.raises(InvalidLabelError, match="no text"):
+        make(FakeClient(resp)).predict(["x"], LABELS)
+
+
+def test_invalid_json_raises_invalid_label():
+    resp = SimpleNamespace(
+        stop_reason="end_turn",
+        content=[SimpleNamespace(type="text", text='{"label": "a"')],
+        usage=SimpleNamespace(input_tokens=1, output_tokens=1),
+    )
+    with pytest.raises(InvalidLabelError, match="invalid JSON"):
+        make(FakeClient(resp)).predict(["x"], LABELS)
+
+
+@pytest.mark.parametrize("text", ["null", "[]", '"a"', "1"])
+def test_non_object_json_raises_invalid_label(text):
+    resp = SimpleNamespace(
+        stop_reason="end_turn",
+        content=[SimpleNamespace(type="text", text=text)],
+        usage=SimpleNamespace(input_tokens=1, output_tokens=1),
+    )
+    with pytest.raises(InvalidLabelError, match="not a JSON object"):
+        make(FakeClient(resp)).predict(["x"], LABELS)

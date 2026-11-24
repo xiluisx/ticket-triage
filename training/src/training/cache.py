@@ -50,8 +50,9 @@ class PredictionCache:
         return [cid for cid in ids if cid not in self._rows]
 
 
-def cache_for(clf: Classifier, root: Path = CACHE) -> PredictionCache:
-    return PredictionCache(root / f"{clf.cache_key}.jsonl")
+def cache_for(clf: Classifier, labels: LabelSet, root: Path = CACHE) -> PredictionCache:
+    """One cache file per classifier config and label set (labels change prompts and criteria)."""
+    return PredictionCache(root / f"{clf.cache_key}-{labels.labels_hash()}.jsonl")
 
 
 def predict_cached(

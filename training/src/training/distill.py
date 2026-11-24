@@ -7,7 +7,6 @@ python -m training.distill run    # label the 2k sample
 from __future__ import annotations
 
 import argparse
-import json
 from collections import Counter
 
 import pandas as pd
@@ -15,7 +14,7 @@ from sklearn.model_selection import train_test_split
 
 from training.cache import cache_for, confirm_cost, predict_cached
 from training.golden import TAG_GROUPS
-from training.jsonl import read_jsonl, write_jsonl
+from training.jsonl import read_jsonl, write_json, write_jsonl
 from training.llm import claude_classifier, estimate_claude_usd
 from training.metrics import kappa
 from training.paths import DISTILL, DISTILLED, GOLDEN_V2, REPORTS
@@ -64,7 +63,7 @@ def kappa_report(human: list[str], model: list[str]) -> dict:
 def gate(assume_yes: bool) -> None:
     rows = read_jsonl(GOLDEN_V2)
     clf = claude_classifier("priority")
-    cache = cache_for(clf)
+    cache = cache_for(clf, labels_for("priority"))
     ids = [r["complaint_id"] for r in rows]
     texts = [r["text"] for r in rows]
     missing = [t for cid, t in zip(ids, texts, strict=True) if cid not in cache]
@@ -96,8 +95,7 @@ def gate(assume_yes: bool) -> None:
             if preds[r["complaint_id"]].label != r["priority"]
         ],
     )
-    REPORTS.mkdir(exist_ok=True)
-    (REPORTS / "kappa_gate.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    write_json(REPORTS / "kappa_gate.json", report)
     verdict = "PASS" if report["passed"] else "FAIL"
     print(f"kappa={report['kappa']:.3f} (n={report['n']}, min {KAPPA_MIN}) → {verdict}")
     print(f"confusion (human → claude): {report['confusion']}")
@@ -112,7 +110,7 @@ def run(assume_yes: bool, workers: int) -> None:
         split=sample["split"].to_numpy()
     )
     clf = claude_classifier("priority")
-    cache = cache_for(clf)
+    cache = cache_for(clf, labels_for("priority"))
     ids = frame["complaint_id"].tolist()
     texts = frame["text"].tolist()
     missing = [t for cid, t in zip(ids, texts, strict=True) if cid not in cache]

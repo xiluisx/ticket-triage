@@ -1,7 +1,8 @@
 """Fairness: metrics per group (tag, text length, readability) with bootstrap intervals.
 
-Tags are only used to measure, never as features. `fairness.json` feeds the CI gate
-(subproject 4): fail when gap_challenger - gap_champion > 0.02.
+Tags are only used to measure, never as features. Writes:
+- reports/fairness.json / fairness.md: descriptive report for every model and dimension;
+- reports/fairness_{task}.json: schema v2 consumed by the CI gate (training.fairness_gate).
 
     python -m training.fairness
 """
@@ -19,8 +20,9 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 from training.evalsets import load_eval  # noqa: E402
-from training.golden import TAG_GROUPS  # noqa: E402
-from training.metrics import bootstrap_ci, macro_f1, recall_of  # noqa: E402
+from training.fairness_gate import build_report, gap, per_group, tag_masks  # noqa: E402
+from training.jsonl import write_json  # noqa: E402
+from training.metrics import macro_f1_present, recall_of  # noqa: E402
 from training.paths import FIGURES, REPORTS  # noqa: E402
 from training.predict import model_preds  # noqa: E402
 from training.replay import common_ids, replay_cascade  # noqa: E402
@@ -30,7 +32,6 @@ from training.train import latest_artifact  # noqa: E402
 VOWEL_GROUPS = re.compile(r"[aeiouy]+")
 WORDS = re.compile(r"[A-Za-z]+")
 SENTENCE_ENDS = re.compile(r"[.!?]+")
-MIN_N = 5
 
 
 def syllables(word: str) -> int:
@@ -57,39 +58,14 @@ def quartile_labels(values: pd.Series) -> pd.Series:
 
 def group_masks(df: pd.DataFrame) -> dict[str, dict[str, pd.Series]]:
     df = df.reset_index(drop=True)
-    tags = df["tags"].fillna("")
-    tag_masks = {tag: tags.str.contains(tag) for tag in TAG_GROUPS}
-    tag_masks["No tag"] = tags == ""
+    tags = {k: pd.Series(v) for k, v in tag_masks(df["tags"]).items()}
     length = quartile_labels(df["text"].str.split().str.len())
     readability = quartile_labels(df["text"].map(flesch))
     return {
-        "tag": tag_masks,
+        "tag": tags,
         "length": {q: length == q for q in ("Q1", "Q2", "Q3", "Q4")},
         "readability": {q: readability == q for q in ("Q1", "Q2", "Q3", "Q4")},
     }
-
-
-def per_group(
-    truth, pred, masks: dict[str, pd.Series], metric, min_n: int = MIN_N, n_boot: int = 1000
-) -> dict:
-    truth, pred = np.asarray(truth), np.asarray(pred)
-    out = {}
-    for name, mask in masks.items():
-        m = np.asarray(mask)
-        n = int(m.sum())
-        if n < min_n:
-            out[name] = {"value": None, "lo": None, "hi": None, "n": n}
-            continue
-        lo, hi = bootstrap_ci(truth[m], pred[m], metric, n_boot=n_boot)
-        out[name] = {"value": metric(truth[m], pred[m]), "lo": lo, "hi": hi, "n": n}
-    return out
-
-
-def gap(groups: dict) -> float | None:
-    values = [g["value"] for g in groups.values()]
-    if any(v is None for v in values) or len(values) < 2:
-        return None
-    return float(max(values) - min(values))
 
 
 def predictions_with_cascade(task: str, set_name: str):
@@ -108,14 +84,16 @@ def predictions_with_cascade(task: str, set_name: str):
     return sub, labels_by_model, levels
 
 
-def evaluate(task: str, set_name: str, metric, metric_name: str) -> dict:
+def evaluate(
+    task: str, set_name: str, metric, metric_name: str, positive: str | None = None
+) -> dict:
     sub, labels_by_model, levels = predictions_with_cascade(task, set_name)
     masks = group_masks(sub)
     models = {}
     for model, pred in labels_by_model.items():
         models[model] = {}
         for dim, dim_masks in masks.items():
-            groups = per_group(sub["truth"], pred, dim_masks, metric)
+            groups = per_group(sub["truth"], pred, dim_masks, metric, positive=positive)
             models[model][dim] = {"groups": groups, "gap": gap(groups)}
     result = {"metric": metric_name, "eval_set": set_name, "n": len(sub), "models": models}
     if levels is not None:
@@ -177,11 +155,12 @@ def to_markdown(report: dict) -> str:
                 ]
                 for name, v in data["groups"].items():
                     val = (
-                        "n insuficiente"
+                        "n o positivos insuficientes"
                         if v["value"] is None
                         else (f"{v['value']:.3f} [{v['lo']:.3f}, {v['hi']:.3f}]")
                     )
-                    lines.append(f"| {name} | {v['n']} | {val} |")
+                    n_txt = v["n"] if v.get("n_pos") is None else f"{v['n']} ({v['n_pos']} pos.)"
+                    lines.append(f"| {name} | {n_txt} | {val} |")
                 lines.append("")
     return "\n".join(lines)
 
@@ -207,21 +186,33 @@ def plot_category(block: dict) -> None:
     fig.savefig(FIGURES / "fairness_category.png", dpi=150)
 
 
+def gate_report(task: str) -> dict:
+    """fairness.json v2 for the current artifact on the golden set; no champion yet → skipped."""
+    sub, labels_by_model, _ = predictions_with_cascade(task, "golden")
+    model = "cascade" if "cascade" in labels_by_model else "classic"
+    return build_report(
+        task,
+        sub["truth"].tolist(),
+        sub["tags"].tolist(),
+        challenger=(latest_artifact(task).name, labels_by_model[model]),
+    )
+
+
 def main() -> None:
-    category_ids = list(labels_for("category").ids)
-
-    def f1(yt, yp):
-        return macro_f1(yt, yp, category_ids)
-
     report = {
-        "category": evaluate("category", "test", f1, "macro_f1"),
-        "priority_golden": evaluate("priority", "golden", recall_of("urgent"), "urgent_recall"),
-        "priority_val": evaluate("priority", "val", recall_of("urgent"), "urgent_recall"),
+        "category": evaluate("category", "test", macro_f1_present, "macro_f1_present"),
+        "priority_golden": evaluate(
+            "priority", "golden", recall_of("urgent"), "urgent_recall", positive="urgent"
+        ),
+        "priority_val": evaluate(
+            "priority", "val", recall_of("urgent"), "urgent_recall", positive="urgent"
+        ),
         "teacher_bias": teacher_bias(),
     }
-    REPORTS.mkdir(exist_ok=True)
-    (REPORTS / "fairness.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    write_json(REPORTS / "fairness.json", report)
     (REPORTS / "fairness.md").write_text(to_markdown(report), encoding="utf-8")
+    for task in ("category", "priority"):
+        write_json(REPORTS / f"fairness_{task}.json", gate_report(task))
     FIGURES.mkdir(parents=True, exist_ok=True)
     plot_category(report["category"])
     print(f"→ {REPORTS / 'fairness.md'}")
