@@ -6,7 +6,8 @@ export AWS_PROFILE AWS_REGION CLOUDFLARE_API_TOKEN
 TF_MAIN := infra/terraform
 DATA_BUCKET = $(shell terraform -chdir=$(TF_MAIN) output -raw data_bucket)
 
-.PHONY: whoami setup lint format test tf-bootstrap tf-init tf-plan tf-apply data data-upload notebooks smoke labelstudio golden-sample golden-subsample golden-export
+.PHONY: whoami setup lint format test tf-bootstrap tf-init tf-plan tf-apply data data-upload notebooks smoke labelstudio golden-sample golden-subsample golden-export \
+	priorities-v2 splits smoke-claude kappa-gate distill train eval-sets predict thresholds benchmark fairness
 
 whoami:           ## Muestra profile, cuenta y ARN activos (revisar antes de cualquier apply)
 	@echo "AWS_PROFILE=$(AWS_PROFILE)"
@@ -66,3 +67,38 @@ golden-subsample: ## Reduce el golden set a 100 conservando lo ya etiquetado
 
 golden-export:
 	uv run python labeling/export.py
+
+priorities-v2:    ## Golden set v2 (prioridad binaria)
+	uv run python -m training.priority
+
+splits:           ## Splits temporales train/val/test
+	uv run python -m training.splits
+
+smoke-claude:     ## [$] Smoke de Claude Haiku 4.5 vía Bedrock (~$0.0005)
+	uv run python scripts/smoke_claude.py
+
+kappa-gate:       ## [$] Claude vs golden (kappa), ~$0.08
+	uv run python -m training.distill gate
+
+distill:          ## [$] Claude etiqueta ~2k tickets de prioridad (~$1.50)
+	uv run python -m training.distill run
+
+train:            ## Entrena clásicos de categoría y prioridad
+	uv run python -m training.train category
+	uv run python -m training.train priority
+
+eval-sets:        ## Marcos de evaluación val/test/golden
+	uv run python -m training.evalsets
+
+predict:          ## [$] Predicciones de clásico, Jev y Claude sobre los marcos (~$1.60)
+	uv run python -m training.predict
+
+thresholds:       ## Barrido de umbrales de la cascada
+	uv run python -m training.thresholds category
+	uv run python -m training.thresholds priority
+
+benchmark:        ## Tabla de 4 modelos + cascada
+	uv run python -m training.benchmark
+
+fairness:         ## Métricas por grupo y fairness.json
+	uv run python -m training.fairness

@@ -172,3 +172,40 @@ def test_merge_annotations_ignores_cancelled():
     pool = [{"data": {"complaint_id": "1", "text": "t", "product": "P"}}]
     out = merge_annotations(pool, [ls_task("1", "a", "P1", cancelled=True)], ["1"])
     assert "annotations" not in out[0]
+
+
+def test_select_for_review_mixes_disagreements_and_controls():
+    from training.golden import select_for_review
+
+    all_ids = [str(i) for i in range(100)]
+    disagreements = {str(i) for i in range(10)}
+    picked = select_for_review(all_ids, disagreements, n_control=5, exclude={"99"}, seed=1)
+    assert len(picked) == 15
+    assert disagreements <= set(picked)
+    assert "99" not in picked
+    assert picked != sorted(picked, key=int)  # shuffled
+    assert picked == select_for_review(all_ids, disagreements, 5, {"99"}, seed=1)
+
+
+def test_apply_review_updates_priority_and_logs():
+    from training.golden import apply_review
+
+    rows = [
+        {"complaint_id": "1", "priority": "urgent"},
+        {"complaint_id": "2", "priority": "urgent"},
+        {"complaint_id": "3", "priority": "not_urgent"},
+    ]
+    out, log = apply_review(rows, {"1": "not_urgent", "2": "urgent"}, disagreements={"1"})
+    assert [r["priority"] for r in out] == ["not_urgent", "urgent", "not_urgent"]
+    assert log == [
+        {"complaint_id": "1", "group": "disagreement", "before": "urgent", "after": "not_urgent"},
+        {"complaint_id": "2", "group": "control", "before": "urgent", "after": "urgent"},
+    ]
+    assert rows[0]["priority"] == "urgent"
+
+
+def test_apply_review_rejects_unknown_label():
+    from training.golden import apply_review
+
+    with pytest.raises(ValueError, match="unknown"):
+        apply_review([{"complaint_id": "1", "priority": "urgent"}], {"1": "P1"}, set())

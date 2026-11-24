@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 from html import escape
 
 import pandas as pd
@@ -153,3 +154,40 @@ def export_annotations(tasks: list[dict], categories: LabelSet, priorities: Labe
             }
         )
     return sorted(rows, key=lambda r: int(r["complaint_id"]))
+
+
+PRIORITY_IDS = ("urgent", "not_urgent")
+
+
+def select_for_review(
+    all_ids: list[str], disagreements: set[str], n_control: int, exclude: set[str], seed: int
+) -> list[str]:
+    """Blind re-review set: every disagreement plus random agreements as controls, shuffled.
+
+    Controls keep the re-review honest: if only disagreements got a second look, kappa would
+    rise by construction. Flips among controls measure the labeler's own consistency.
+    """
+    rng = random.Random(seed)  # noqa: S311 - sampling, not crypto
+    agreements = sorted((set(all_ids) - disagreements - exclude), key=int)
+    picked = sorted(disagreements - exclude, key=int) + rng.sample(agreements, n_control)
+    rng.shuffle(picked)
+    return picked
+
+
+def apply_review(
+    rows: list[dict], decisions: dict[str, str], disagreements: set[str]
+) -> tuple[list[dict], list[dict]]:
+    """Overwrite priority with the re-review decision; log before/after per reviewed row."""
+    out, log = [], []
+    for row in rows:
+        cid = row["complaint_id"]
+        if cid not in decisions:
+            out.append(row)
+            continue
+        after = decisions[cid]
+        if after not in PRIORITY_IDS:
+            raise ValueError(f"unknown priority {after!r} for {cid}")
+        out.append({**row, "priority": after})
+        group = "disagreement" if cid in disagreements else "control"
+        log.append({"complaint_id": cid, "group": group, "before": row["priority"], "after": after})
+    return out, log

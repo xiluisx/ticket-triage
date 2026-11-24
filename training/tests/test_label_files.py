@@ -17,3 +17,8 @@ def test_categories_file_is_valid():
 def test_priorities_file_is_valid():
     labels = LabelSet.from_json(ROOT / "datasets" / "priorities_v1.json")
     assert labels.ids == ("P1", "P2", "P3")
+
+
+def test_priorities_v2_file_is_valid():
+    labels = LabelSet.from_json(ROOT / "datasets" / "priorities_v2.json")
+    assert labels.ids == ("urgent", "not_urgent")

@@ -1,0 +1,18 @@
+{
+  "n": 100,
+  "kappa": 0.5385232744783307,
+  "confusion": {
+    "not_urgent": {
+      "not_urgent": 43,
+      "urgent": 8
+    },
+    "urgent": {
+      "urgent": 34,
+      "not_urgent": 15
+    }
+  },
+  "model_id": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+  "cache_key": "claude-fcd008ef81aa",
+  "passed": false,
+  "mean_usd_per_call": 0.00076866
+}

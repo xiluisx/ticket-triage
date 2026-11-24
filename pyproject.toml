@@ -43,4 +43,5 @@ known-first-party = ["triage_core", "training"]
 
 [tool.pytest.ini_options]
 testpaths = ["backend/triage_core/tests", "training/tests"]
-addopts = "--cov=triage_core --cov=training --cov-report=term-missing"
+addopts = "--cov=triage_core --cov=training --cov-report=term-missing -m 'not live'"
+markers = ["live: calls paid external APIs; run manually with -m live"]
