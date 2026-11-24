@@ -14,7 +14,7 @@ class ClassicClassifier:
     def __init__(self, model, labels_hash: str, version: str):
         self.model = model
         self.labels_hash = labels_hash
-        self.cache_key = f"classic-{version}"
+        self.cache_key = f"classic-{version}-{labels_hash}"
 
     def predict(self, texts: list[str], labels: LabelSet) -> list[Prediction]:
         if labels.labels_hash() != self.labels_hash:

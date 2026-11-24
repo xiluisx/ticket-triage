@@ -55,7 +55,7 @@ def test_artifact_roundtrip(tmp_path):
     clf = load_classic(path)
     [pred] = clf.predict(["foreclosure home"], LABELS)
     assert pred.label == "mortgage"
-    assert clf.cache_key == "classic-v20261123-abc"
+    assert clf.cache_key == f"classic-v20261123-abc-{LABELS.labels_hash()}"
 
 
 def test_latest_artifact_picks_newest(tmp_path):

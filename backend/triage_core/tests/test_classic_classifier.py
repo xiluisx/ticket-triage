@@ -24,7 +24,7 @@ def test_predict_returns_argmax_and_probs():
 
 
 def test_cache_key_includes_version():
-    assert ClassicClassifier(FakeModel(), "h", "v7").cache_key == "classic-v7"
+    assert ClassicClassifier(FakeModel(), "h", "v7").cache_key == "classic-v7-h"
 
 
 def test_stale_labels_raise():
@@ -35,3 +35,10 @@ def test_stale_labels_raise():
 
 def test_empty_input():
     assert ClassicClassifier(FakeModel(), LABELS.labels_hash(), "v1").predict([], LABELS) == []
+
+
+def test_cache_key_differs_across_label_sets_with_same_version():
+    other = LabelSet((Label("x", "X", "x"), Label("y", "Y", "y")))
+    a = ClassicClassifier(FakeModel(), LABELS.labels_hash(), "v1")
+    b = ClassicClassifier(FakeModel(), other.labels_hash(), "v1")
+    assert a.cache_key != b.cache_key
