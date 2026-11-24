@@ -86,7 +86,15 @@ class ClaudeClassifier:
         latency_ms = (time.perf_counter() - start) * 1000
         if resp.stop_reason == "refusal":
             raise InvalidLabelError("Claude refused to classify")
-        data = json.loads(next(b.text for b in resp.content if b.type == "text"))
+        if resp.stop_reason == "max_tokens":
+            raise InvalidLabelError("Claude hit max_tokens before finishing the JSON answer")
+        text = next((b.text for b in resp.content if b.type == "text"), None)
+        if text is None:
+            raise InvalidLabelError("Claude returned no text block")
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError as err:
+            raise InvalidLabelError(f"Claude returned invalid JSON: {err}") from err
         label = data.get("label")
         if label not in labels.ids:
             raise InvalidLabelError(f"Claude answered {label!r}")
