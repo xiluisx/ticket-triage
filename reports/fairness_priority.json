@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "task": "priority",
+  "eval_set": "golden",
+  "dimension": "tag",
+  "metric": "recall_urgent",
+  "min_positives": 5,
+  "models": {
+    "challenger": {
+      "version": "v20261123-3c155e3",
+      "gap": 0.15865384615384615,
+      "per_group": {
+        "Older American": {
+          "n": 22,
+          "n_pos": 11,
+          "value": 0.7272727272727273,
+          "ci95": [
+            0.4444444444444444,
+            1.0
+          ]
+        },
+        "Servicemember": {
+          "n": 22,
+          "n_pos": 16,
+          "value": 0.8125,
+          "ci95": [
+            0.6,
+            1.0
+          ]
+        },
+        "No tag": {
+          "n": 63,
+          "n_pos": 26,
+          "value": 0.6538461538461539,
+          "ci95": [
+            0.45443181818181816,
+            0.84
+          ]
+        }
+      }
+    }
+  },
+  "gate": {
+    "status": "skipped",
+    "reason": "no champion",
+    "delta_gap": null,
+    "ci95": null,
+    "n_boot": 2000,
+    "seed": 0
+  }
+}
