@@ -30,6 +30,7 @@ class JevClassifier:
         temperature: float = 1.0,
         max_chars: int = 4000,
         sleep: Callable[[float], None] = time.sleep,
+        attempts: int = 5,
     ):
         self.post = post
         self.instructions = instructions
@@ -37,6 +38,7 @@ class JevClassifier:
         self.temperature = temperature
         self.max_chars = max_chars
         self.sleep = sleep
+        self.attempts = attempts
         key_parts: list = [JEV_MODEL, instructions, max_chars]
         if temperature != 1.0:
             # Cached probs are post-temperature; T=1 keeps the legacy key (existing paid caches).
@@ -69,7 +71,10 @@ class JevClassifier:
 
         start = time.perf_counter()
         data = call_with_retries(
-            call, is_retryable=lambda e: isinstance(e, RetryableError), sleep=self.sleep
+            call,
+            is_retryable=lambda e: isinstance(e, RetryableError),
+            attempts=self.attempts,
+            sleep=self.sleep,
         )
         latency_ms = (time.perf_counter() - start) * 1000
         answer = data["answers"]["label"]

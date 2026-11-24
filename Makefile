@@ -1,13 +1,14 @@
 # Project-pinned AWS profile/region and Cloudflare token come from .env and override the shell,
 # so a profile exported for another project (e.g. AWS_PROFILE=velhera) is never used here.
 -include .env
-export AWS_PROFILE AWS_REGION CLOUDFLARE_API_TOKEN
+export AWS_PROFILE AWS_REGION CLOUDFLARE_API_TOKEN TRIAGE_API_KEY
 
 TF_MAIN := infra/terraform
 DATA_BUCKET = $(shell terraform -chdir=$(TF_MAIN) output -raw data_bucket)
 
 .PHONY: whoami setup lint format test tf-bootstrap tf-init tf-plan tf-apply data data-upload notebooks smoke labelstudio golden-sample golden-subsample golden-export \
-	priorities-v2 splits smoke-claude kappa-gate distill train eval-sets predict thresholds benchmark fairness
+	priorities-v2 splits smoke-claude kappa-gate distill train eval-sets predict thresholds benchmark fairness \
+	api-image api-deploy smoke-api
 
 whoami:           ## Muestra profile, cuenta y ARN activos (revisar antes de cualquier apply)
 	@echo "AWS_PROFILE=$(AWS_PROFILE)"
@@ -102,3 +103,12 @@ benchmark:        ## Tabla de 4 modelos + cascada
 
 fairness:         ## Métricas por grupo y fairness.json
 	uv run python -m training.fairness
+
+api-image:        ## Construye la imagen de la Lambda de inferencia (local, $$0)
+	docker build --provenance=false -f docker/lambda.Dockerfile -t ticket-triage-api:local .
+
+api-deploy:       ## [$$] ECR + imagen + Lambda con Function URL (centavos)
+	./scripts/deploy_api.sh
+
+smoke-api:        ## [$$] 3 tickets contra la API desplegada (< $$0.01)
+	./scripts/smoke_api.sh

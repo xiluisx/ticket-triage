@@ -4,27 +4,30 @@ version = "0.1.0"
 description = "Multi-tenant ticket triage SaaS with a cost-aware ML/LLM cascade"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
-dependencies = ["triage-core", "training"]
+dependencies = ["triage-core", "training", "triage-services"]
 
 [tool.uv]
 package = false
 
 [tool.uv.workspace]
-members = ["backend/triage_core", "training"]
+members = ["backend/triage_core", "backend/services", "training"]
 
 [tool.uv.sources]
 triage-core = { workspace = true }
 training = { workspace = true }
+triage-services = { workspace = true }
 
 [dependency-groups]
 dev = [
     "ipykernel>=6.29",
     "jupytext>=1.16",
+    "moto[dynamodb,ssm]>=5.0",
     "nbconvert>=7.16",
     "pre-commit>=4.0",
     "pytest>=8.3",
     "pytest-cov>=6.0",
     "ruff>=0.8",
+    "uvicorn>=0.32",
 ]
 
 [tool.ruff]
@@ -35,13 +38,13 @@ target-version = "py312"
 select = ["E", "F", "W", "I", "B", "S", "UP"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["triage_core", "training"]
+known-first-party = ["triage_core", "training", "triage_services"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S101"]
 "notebooks/**" = ["E402", "B018", "S101"]
 
 [tool.pytest.ini_options]
-testpaths = ["backend/triage_core/tests", "training/tests"]
-addopts = "--cov=triage_core --cov=training --cov-report=term-missing -m 'not live'"
+testpaths = ["backend/triage_core/tests", "backend/services/tests", "training/tests"]
+addopts = "--cov=triage_core --cov=training --cov=triage_services --cov-report=term-missing -m 'not live'"
 markers = ["live: calls paid external APIs; run manually with -m live"]

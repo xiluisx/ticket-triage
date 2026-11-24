@@ -54,6 +54,12 @@ class Cascade:
                 for i in pending:
                     skipped[i].append(f"{clf.name}:stale")
                 continue
+            except Exception as err:
+                # Never log ticket text; the error type is enough to debug a level outage.
+                logger.warning("cascade level %s failed: %s", clf.name, type(err).__name__)
+                for i in pending:
+                    skipped[i].append(f"{clf.name}:error")
+                continue
             still = []
             for i, pred in zip(pending, preds, strict=True):
                 spent[i] += pred.cost_usd
@@ -69,6 +75,13 @@ class Cascade:
                 else:
                     still.append(i)
             pending = still
-        if pending:
-            raise RuntimeError(f"{len(pending)} texts left unclassified")
+        for i in pending:  # every level failed: the ticket is kept as unclassified
+            results[i] = Prediction(
+                None,
+                {},
+                level="none",
+                cost_usd=spent[i],
+                latency_ms=waited[i],
+                skipped=tuple(skipped[i]),
+            )
         return results  # type: ignore[return-value]

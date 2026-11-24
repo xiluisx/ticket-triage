@@ -78,3 +78,28 @@ def test_thresholds_roundtrip():
     assert LevelThresholds.from_dict(thr.to_dict()) == thr
     assert thr.threshold("urgent") == 0.7
     assert thr.threshold("not_urgent") == 0.95
+
+
+class Boom:
+    def __init__(self, name):
+        self.name = name
+        self.cache_key = name
+
+    def predict(self, texts, labels):
+        raise TimeoutError("network")
+
+
+def test_failing_middle_level_is_recorded_and_skipped(caplog):
+    claude = Fixed("claude", {"x": ("urgent", 1.0)}, cost=0.001)
+    with caplog.at_level("WARNING", logger="triage_core.cascade"):
+        [p] = Cascade([(Boom("jev"), LevelThresholds(0.5)), (claude, None)]).predict(["x"], LABELS)
+    assert (p.label, p.level, p.skipped) == ("urgent", "claude", ("jev:error",))
+    assert "TimeoutError" in caplog.text
+
+
+def test_failing_last_level_yields_none():
+    jev = Fixed("jev", {"x": ("urgent", 0.2)}, cost=0.0001)
+    [p] = Cascade([(jev, LevelThresholds(0.9)), (Boom("claude"), None)]).predict(["x"], LABELS)
+    assert (p.label, p.level, p.confidence) == (None, "none", 0.0)
+    assert p.skipped == ("claude:error",)
+    assert p.cost_usd == pytest.approx(0.0001)

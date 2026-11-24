@@ -12,7 +12,7 @@ from triage_core.labels import LabelSet
 
 @dataclass(frozen=True)
 class Prediction:
-    label: str
+    label: str | None
     probs: dict[str, float]
     rationale: str | None = None
     level: str | None = None
@@ -26,7 +26,7 @@ class Prediction:
 
     @property
     def confidence(self) -> float:
-        return self.probs.get(self.label, 0.0)
+        return 0.0 if self.label is None else self.probs.get(self.label, 0.0)
 
 
 class Classifier(Protocol):
