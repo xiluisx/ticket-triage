@@ -15,6 +15,7 @@ import numpy as np  # noqa: E402
 from sklearn.metrics import ConfusionMatrixDisplay  # noqa: E402
 
 from training.evalsets import EVAL_SETS, load_eval  # noqa: E402
+from training.jsonl import write_json  # noqa: E402
 from training.metrics import (  # noqa: E402
     accuracy,
     bootstrap_ci,
@@ -152,7 +153,7 @@ def main() -> None:
     agreement = product_vs_golden()
     REPORTS.mkdir(exist_ok=True)
     payload = {"results": results, "product_vs_golden_agreement": agreement}
-    (REPORTS / "benchmark.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    write_json(REPORTS / "benchmark.json", payload)
     md = to_markdown(results)
     md += f"\nAcuerdo producto CFPB vs golden (categoría): {agreement:.2f}\n"
     (REPORTS / "benchmark.md").write_text(md, encoding="utf-8")
