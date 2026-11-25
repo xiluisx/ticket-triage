@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket Triage</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1c2430; --muted: #5b6676; --line: #e3e7ec;
+    --accent: #2a6fdb; --urgent: #c0392b; --urgent-bg: #fdecea; --ok: #1e7a4c; --ok-bg: #e6f4ec;
+    --classic: #1e7a4c; --jev: #8a5a00; --claude: #6b3fb5; --none: #9aa4b1; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12161c; --card: #1b2129; --ink: #e6e9ee; --muted: #9aa4b1; --line: #2b333e;
+      --accent: #6ea2ff; --urgent: #ff7b6b; --urgent-bg: #3a1f1c; --ok: #5fd08f; --ok-bg: #1a3326;
+      --classic: #5fd08f; --jev: #f0b54a; --claude: #b79aff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 20px 24px 8px; max-width: 1180px; margin: 0 auto; }
+  header h1 { margin: 0; font-size: 22px; }
+  header p { margin: 4px 0 0; color: var(--muted); }
+  main { max-width: 1180px; margin: 0 auto; padding: 12px 24px 40px;
+         display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 20px; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; padding: 12px 16px 32px; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+  .card h2 { margin: 0 0 12px; font-size: 16px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input, textarea { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px;
+                    background: var(--bg); color: var(--ink); font: inherit; }
+  textarea { min-height: 150px; resize: vertical; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 8px;
+           padding: 8px 12px; font: inherit; cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button:disabled { opacity: .6; cursor: wait; }
+  .examples { margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .examples button { font-size: 13px; padding: 4px 9px; }
+  .error { color: var(--urgent); margin-top: 10px; min-height: 1.5em; }
+  .result { display: none; margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .tasks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .task { border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  .task .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .task .v { font-size: 18px; font-weight: 650; margin: 2px 0 6px; }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent); }
+  .meta { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600;
+          border: 1px solid currentColor; }
+  .lvl-classic { color: var(--classic); } .lvl-jev { color: var(--jev); }
+  .lvl-claude { color: var(--claude); } .lvl-none { color: var(--none); }
+  .urgent { color: var(--urgent); background: var(--urgent-bg); border-color: transparent; }
+  .not_urgent { color: var(--ok); background: var(--ok-bg); border-color: transparent; }
+  .redacted { margin-top: 12px; font-size: 13px; background: var(--bg); border: 1px solid var(--line);
+              border-radius: 8px; padding: 10px; white-space: pre-wrap; max-height: 160px; overflow: auto; }
+  .redacted mark { background: #ffe58a; color: #222; border-radius: 3px; padding: 0 2px; }
+  .summary { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .summary b { color: var(--ink); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td.subj { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .empty { color: var(--muted); padding: 16px 0; }
+  footer { max-width: 1180px; margin: 0 auto; padding: 0 24px 28px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Ticket Triage</h1>
+  <p>Clasifica quejas de clientes por categoría y prioridad con una cascada de costo mínimo:
+     modelo clásico → Jev → Claude Haiku 4.5. La PII se redacta antes de guardar.</p>
+</header>
+
+<main>
+  <section class="card" aria-labelledby="new-h">
+    <h2 id="new-h">Nuevo ticket</h2>
+    <label for="key">API key del tenant</label>
+    <input id="key" type="password" autocomplete="off" placeholder="tt_cfpb-demo_…">
+    <label for="subject">Asunto</label>
+    <input id="subject" maxlength="300" placeholder="Opcional">
+    <label for="body">Descripción (en inglés, como el dataset CFPB)</label>
+    <textarea id="body" maxlength="50000" placeholder="Describe the problem…"></textarea>
+    <div class="examples row">Ejemplos:
+      <button type="button" data-ex="0">Ejecución hipotecaria</button>
+      <button type="button" data-ex="1">Cargo indebido</button>
+      <button type="button" data-ex="2">Robo de identidad + PII</button>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button id="send" class="primary" type="button">Clasificar</button>
+    </div>
+    <div id="error" class="error" role="alert"></div>
+
+    <div id="result" class="result" aria-live="polite">
+      <div class="tasks">
+        <div class="task" id="t-category"></div>
+        <div class="task" id="t-priority"></div>
+      </div>
+      <div class="summary" id="summary"></div>
+      <div class="redacted" id="redacted"></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="list-h">
+    <div class="row" style="justify-content:space-between">
+      <h2 id="list-h" style="margin:0">Bandeja (más recientes)</h2>
+      <button id="refresh" type="button">Actualizar</button>
+    </div>
+    <div style="overflow-x:auto; margin-top:10px">
+      <table>
+        <thead><tr><th>Recibido</th><th>Asunto / texto</th><th>Categoría</th><th>Prioridad</th><th>Nivel</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="5" class="empty">Ingresa la API key para ver los tickets.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<footer>Proyecto final MLOps · datos CFPB · la API key se guarda solo en esta pestaña (sessionStorage).</footer>
+
+<script>
+const LABELS = __LABELS__;
+const LEVEL_NAMES = { classic: "Clásico", jev: "Jev", claude: "Claude", none: "Sin clasificar" };
+const EXAMPLES = [
+  { subject: "Foreclosure sale next week",
+    body: "My mortgage servicer scheduled a foreclosure sale of my home for next Tuesday even though I submitted all the loan modification documents last month. Nobody answers the phone and I am about to lose my house." },
+  { subject: "Late fee charged by mistake",
+    body: "My credit card statement shows a late fee of $35 but my payment was made two days before the due date. I would like the fee refunded." },
+  { subject: "Accounts opened in my name",
+    body: "Someone opened two credit cards in my name and my credit report now shows debts that are not mine. You can reach me at jane.roe@example.com or (555) 123-4567. My SSN is 123-45-6789." },
+];
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const labelName = (task, id) => id == null ? "—" : ((LABELS[task] || {})[id] || id);
+
+try { $("key").value = sessionStorage.getItem("tt_key") || ""; } catch (e) {}
+
+async function api(path, options = {}) {
+  const key = $("key").value.trim();
+  if (!key) throw new Error("Falta la API key.");
+  try { sessionStorage.setItem("tt_key", key); } catch (e) {}
+  const resp = await fetch(path, { ...options, headers: { "Content-Type": "application/json", "X-Api-Key": key } });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error((data.error && data.error.message) || `HTTP ${resp.status}`);
+  return data;
+}
+
+function levelPill(level) {
+  return el("span", `pill lvl-${level}`, LEVEL_NAMES[level] || level);
+}
+
+function renderTask(task, p) {
+  const box = $(`t-${task}`);
+  box.replaceChildren();
+  box.append(el("div", "k", task === "category" ? "Categoría" : "Prioridad"));
+  const v = el("div", "v", labelName(task, p.label));
+  if (task === "priority" && p.label) v.append(" ", el("span", `pill ${p.label}`, p.label === "urgent" ? "urgente" : "no urgente"));
+  box.append(v);
+  const bar = el("div", "bar"); const fill = el("i"); fill.style.width = `${Math.round(p.confidence * 100)}%`; bar.append(fill);
+  box.append(bar);
+  const meta = el("div", "meta");
+  meta.append(`Confianza ${(p.confidence * 100).toFixed(0)}% · `, levelPill(p.level));
+  if (p.model_version) meta.append(` · ${p.model_version}`);
+  box.append(meta);
+  if (p.skipped && p.skipped.length) box.append(el("div", "meta", `Omitidos: ${p.skipped.join(", ")}`));
+  if (p.rationale) box.append(el("div", "meta", `Claude: ${p.rationale}`));
+}
+
+function renderRedacted(text) {
+  const box = $("redacted"); box.replaceChildren();
+  box.append(el("div", "meta", "Texto guardado (PII redactada):"));
+  const pre = el("div");
+  text.split(/(XXXX)/).forEach((part) => pre.append(part === "XXXX" ? el("mark", null, part) : part));
+  box.append(pre);
+}
+
+function renderResult(t) {
+  renderTask("category", t.prediction.category);
+  renderTask("priority", t.prediction.priority);
+  const cost = t.prediction.category.cost_usd + t.prediction.priority.cost_usd;
+  const latency = Math.max(t.prediction.category.latency_ms, t.prediction.priority.latency_ms);
+  const pii = Object.entries(t.pii_counts).map(([k, n]) => `${k}×${n}`).join(", ") || "ninguna";
+  const s = $("summary"); s.replaceChildren();
+  [["Costo", `$${cost.toFixed(5)}`], ["Latencia modelo", `${latency.toFixed(0)} ms`], ["PII", pii], ["ID", t.ticket_id]]
+    .forEach(([k, v]) => { const d = el("div"); d.append(`${k}: `, el("b", null, v)); s.append(d); });
+  renderRedacted(t.body_redacted);
+  $("result").style.display = "block";
+}
+
+async function refresh() {
+  const rows = $("rows");
+  try {
+    const { items } = await api("/v1/tickets?limit=25");
+    rows.replaceChildren();
+    if (!items.length) { const tr = el("tr"); const td = el("td", "empty", "Sin tickets todavía."); td.colSpan = 5; tr.append(td); rows.append(tr); return; }
+    for (const t of items) {
+      const tr = el("tr");
+      tr.append(el("td", null, new Date(t.received_at).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })));
+      tr.append(el("td", "subj", t.subject || t.body_redacted));
+      tr.append(el("td", null, labelName("category", t.final_category)));
+      const pr = el("td"); if (t.final_priority) pr.append(el("span", `pill ${t.final_priority}`, t.final_priority === "urgent" ? "urgente" : "no urgente")); else pr.append("—");
+      tr.append(pr);
+      const lv = el("td"); lv.append(levelPill(t.prediction.category.level), " ", levelPill(t.prediction.priority.level));
+      tr.append(lv);
+      rows.append(tr);
+    }
+  } catch (err) {
+    rows.replaceChildren(); const tr = el("tr"); const td = el("td", "empty", err.message); td.colSpan = 5; tr.append(td); rows.append(tr);
+  }
+}
+
+$("send").addEventListener("click", async () => {
+  $("error").textContent = "";
+  const body = $("body").value.trim();
+  if (!body) { $("error").textContent = "Escribe la descripción del ticket."; return; }
+  $("send").disabled = true; $("send").textContent = "Clasificando…";
+  try {
+    const t = await api("/v1/tickets", { method: "POST", body: JSON.stringify({ subject: $("subject").value.trim(), body }) });
+    renderResult(t);
+    refresh();
+  } catch (err) {
+    $("error").textContent = err.message;
+  } finally {
+    $("send").disabled = false; $("send").textContent = "Clasificar";
+  }
+});
+
+document.querySelectorAll("[data-ex]").forEach((b) => b.addEventListener("click", () => {
+  const ex = EXAMPLES[Number(b.dataset.ex)];
+  $("subject").value = ex.subject; $("body").value = ex.body;
+}));
+$("refresh").addEventListener("click", refresh);
+if ($("key").value) refresh();
+</script>
+</body>
+</html>

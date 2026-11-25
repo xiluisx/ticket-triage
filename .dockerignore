@@ -1,0 +1,12 @@
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!backend/triage_core/
+!backend/services/
+!training/pyproject.toml
+!datasets/categories_v1.json
+!datasets/priorities_v2.json
+!models/
+**/tests/
+**/__pycache__/

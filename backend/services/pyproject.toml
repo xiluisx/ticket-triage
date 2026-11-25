@@ -1,0 +1,24 @@
+[project]
+name = "triage-services"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "anthropic[bedrock]>=2.12.0",
+    "boto3>=1.35",
+    "fastapi>=0.115",
+    "httpx>=0.28",
+    "mangum>=0.19",
+    "pydantic>=2.9",
+    "scikit-learn>=1.5",
+    "triage-core",
+]
+
+[tool.uv.sources]
+triage-core = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/triage_services"]

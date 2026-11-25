@@ -98,3 +98,12 @@ def test_cache_key_treats_int_and_float_temperature_alike():
         make(FakePost([]), temperature=4).cache_key == make(FakePost([]), temperature=4.0).cache_key
     )
     assert make(FakePost([]), temperature=1).cache_key == make(FakePost([])).cache_key
+
+
+def test_attempts_one_does_not_retry():
+    from triage_core.retry import RetryableError
+
+    post = FakePost([(503, {})])
+    with pytest.raises(RetryableError):
+        make(post, attempts=1).predict(["x"], LABELS)
+    assert len(post.bodies) == 1
