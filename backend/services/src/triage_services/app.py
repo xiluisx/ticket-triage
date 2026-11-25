@@ -8,21 +8,25 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import hmac
+import json
 import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from functools import cache
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from triage_core.ids import iso_z, new_ulid, utc_now
+from triage_core.labels import LabelSet
 from triage_core.pii import merge_counts, redact
 from triage_services.emf import EmfLogger
-from triage_services.engine import TaskEngine, classify, compose_text
+from triage_services.engine import LABEL_FILES, TaskEngine, classify, compose_text
 from triage_services.schemas import (
     ErrorResponse,
     Ticket,
@@ -38,6 +42,7 @@ logger = logging.getLogger(__name__)
 MAX_BODY_CHARS = 8000  # same cut as training
 HTTP_CODES = {401: "unauthorized", 403: "forbidden", 404: "not_found", 405: "not_found"}
 ERRORS = {s: {"model": ErrorResponse} for s in (401, 404, 422, 500)}
+PAGE = Path(__file__).parent / "static" / "index.html"
 
 
 @dataclass
@@ -78,6 +83,17 @@ def authorized(request: Request, x_api_key: Annotated[str | None, Header()] = No
 Authorized = Annotated[Deps, Depends(authorized)]
 
 
+@cache
+def render_page(datasets_dir: Path) -> str:
+    names = {
+        task: {lb.id: lb.name for lb in LabelSet.from_json(datasets_dir / f).labels}
+        for task, f in LABEL_FILES.items()
+    }
+    # "</" is escaped so label text can never close the <script> block.
+    labels = json.dumps(names, ensure_ascii=False).replace("</", "<\\/")
+    return PAGE.read_text(encoding="utf-8").replace("__LABELS__", labels)
+
+
 def create_app(deps_factory: Callable[[], Deps]) -> FastAPI:
     app = FastAPI(
         title="Ticket Triage API",
@@ -112,6 +128,11 @@ def create_app(deps_factory: Callable[[], Deps]) -> FastAPI:
                 {"Errors": 1},
             )
         return error_response(500, "internal_error", "internal error")
+
+    @app.get("/", include_in_schema=False, response_class=HTMLResponse)
+    def index() -> HTMLResponse:
+        """Demo page; it calls the same API with the key the user types (never embedded)."""
+        return HTMLResponse(render_page(Settings.from_env().datasets_dir))
 
     @app.get("/health", include_in_schema=False)
     def health() -> dict:

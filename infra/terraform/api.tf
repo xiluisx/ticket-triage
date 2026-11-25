@@ -142,8 +142,8 @@ resource "aws_lambda_function" "api" {
   package_type  = "Image"
   image_uri     = "${aws_ecr_repository.api.repository_url}:${var.api_image_tag}"
   architectures = ["x86_64"]
-  memory_size   = 1024
-  timeout       = 25
+  memory_size   = 2048 # more memory = more CPU: cold start (SSM + models + clients) ~11 s at 1 GB
+  timeout       = 60   # Function URL has no 30 s gateway cap
 
   environment {
     variables = {

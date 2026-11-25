@@ -137,3 +137,14 @@ def test_mangum_function_url_event(api, settings, table):
     resp = handler(event, None)
     assert resp["statusCode"] == 200
     assert json.loads(resp["body"]) == {"items": []}
+
+
+def test_index_page_is_served_without_secrets(api):
+    resp = api.client.get("/")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/html")
+    html = resp.text
+    assert "Ticket Triage" in html
+    assert "__LABELS__" not in html
+    assert '"mortgage": "Mortgage' in html or '"mortgage":' in html
+    assert "tt_cfpb-demo_test-secret" not in html  # the key is typed by the user, never embedded
