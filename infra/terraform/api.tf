@@ -206,3 +206,53 @@ output "api_ecr_url" {
 output "api_url" {
   value = var.api_image_tag == "" ? null : aws_lambda_function_url.api[0].function_url
 }
+
+# First 3 dashboards are free. Metrics come from the API's EMF log lines (no dimensions).
+resource "aws_cloudwatch_dashboard" "api" {
+  dashboard_name = "ticket-triage"
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type = "metric", x = 0, y = 0, width = 12, height = 6
+        properties = {
+          title   = "Tickets procesados y sin clasificar"
+          region  = "us-east-1"
+          stat    = "Sum"
+          period  = 300
+          metrics = [["TicketTriage", "TicketsProcessed"], ["TicketTriage", "Unclassified"], ["TicketTriage", "Errors"]]
+        }
+      },
+      {
+        type = "metric", x = 12, y = 0, width = 12, height = 6
+        properties = {
+          title  = "Latencia de clasificación (ms)"
+          region = "us-east-1"
+          period = 300
+          metrics = [
+            ["TicketTriage", "ClassificationLatency", { stat = "p50", label = "p50" }],
+            ["TicketTriage", "ClassificationLatency", { stat = "p95", label = "p95" }],
+          ]
+        }
+      },
+      {
+        type = "metric", x = 0, y = 6, width = 12, height = 6
+        properties = {
+          title   = "Costo de clasificación (USD) y PII redactada"
+          region  = "us-east-1"
+          stat    = "Sum"
+          period  = 300
+          metrics = [["TicketTriage", "ClassificationCost"], ["TicketTriage", "PiiRedacted", { yAxis = "right" }]]
+        }
+      },
+      {
+        type = "log", x = 12, y = 6, width = 12, height = 6
+        properties = {
+          title  = "Nivel de la cascada que decidió (categoría)"
+          region = "us-east-1"
+          view   = "table"
+          query  = "SOURCE '/aws/lambda/ticket-triage-api' | fields category.level as level | filter event = \"ticket_classified\" | stats count(*) as tickets, avg(cost_usd) as usd by level"
+        }
+      },
+    ]
+  })
+}

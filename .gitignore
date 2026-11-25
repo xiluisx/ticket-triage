@@ -29,3 +29,6 @@ docs/superpowers/
 
 # Report evidence screenshots (may show account ids); used in the PDF, not published
 docs/evidence/*.png
+
+# Report PDF embeds evidence screenshots (account id); deliver it directly
+docs/report/*.pdf

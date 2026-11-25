@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Ticket Triage — póster</title>
+<style>
+  @page { size: A3 landscape; margin: 0; }
+  :root { --ink: #17212b; --muted: #556270; --line: #dfe4ea; --accent: #2a6fdb; --accent-2: #0f9d8a;
+          --urgent: #c0392b; --bg: #f5f7fa; --card: #ffffff; --classic: #1e7a4c; --jev: #a86b00; --claude: #6b3fb5; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+               font: 12.5px/1.36 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+  .poster { width: 420mm; height: 297mm; padding: 10mm 12mm; display: grid;
+            grid-template-rows: auto 1fr auto; gap: 5mm; overflow: hidden; margin: 0 auto; background: var(--bg); }
+  header { display: flex; justify-content: space-between; align-items: flex-end;
+           border-bottom: 4px solid var(--accent); padding-bottom: 3mm; }
+  header h1 { margin: 0; font-size: 40px; letter-spacing: -.5px; }
+  header p { margin: 4px 0 0; font-size: 17px; color: var(--muted); }
+  header .who { text-align: right; color: var(--muted); font-size: 13px; }
+  .grid { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 5mm; min-height: 0; }
+  .col { display: flex; flex-direction: column; gap: 4mm; min-height: 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 3.5mm 4.5mm; }
+  .card h2 { margin: 0 0 2mm; font-size: 16px; color: var(--accent); }
+  .card p { margin: 0 0 2mm; }
+  ul { margin: 0; padding-left: 18px; } li { margin: 0.6mm 0; }
+  .big { font-size: 28px; font-weight: 700; line-height: 1.1; }
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+  .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 3mm; text-align: center; }
+  .kpi .big { color: var(--accent); }
+  .kpi small { color: var(--muted); display: block; margin-top: 1mm; font-size: 11.5px; }
+  .flow { display: flex; align-items: stretch; gap: 3mm; margin: 2mm 0 3mm; }
+  .step { flex: 1; border-radius: 8px; padding: 3mm; color: #fff; text-align: center; font-weight: 600; font-size: 12.5px; }
+  .step span { display: block; font-weight: 400; font-size: 12px; opacity: .92; margin-top: 1mm; font-size: 11px; }
+  .arrow { align-self: center; color: var(--muted); font-size: 22px; }
+  .s-pii { background: #556270; } .s-classic { background: var(--classic); }
+  .s-jev { background: var(--jev); } .s-claude { background: var(--claude); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { padding: 1mm 1.6mm; border-bottom: 1px solid var(--line); text-align: left; }
+  th { color: var(--muted); font-weight: 600; }
+  tr.win td { font-weight: 700; background: #eef4ff; }
+  img { width: 100%; display: block; border-radius: 6px; }
+  .pii { font-family: Consolas, monospace; font-size: 11.5px; background: var(--bg); border: 1px solid var(--line);
+         border-radius: 6px; padding: 2mm; }
+  .pii mark { background: #ffe58a; padding: 0 2px; border-radius: 3px; }
+  .note { color: var(--muted); font-size: 11px; }
+  .tag { display: inline-block; padding: 0 7px; border-radius: 99px; font-size: 12px; font-weight: 600; color: #fff; }
+  footer { display: flex; justify-content: space-between; color: var(--muted); font-size: 11.5px;
+           border-top: 1px solid var(--line); padding-top: 3mm; }
+  @media screen { body { padding: 10px 0; } .poster { box-shadow: 0 2px 16px rgba(0,0,0,.12); } }
+</style>
+</head>
+<body>
+<div class="poster">
+  <header>
+    <div>
+      <h1>Ticket Triage</h1>
+      <p>Clasificar quejas de clientes por categoría y urgencia con una cascada de costo mínimo</p>
+    </div>
+    <div class="who">Luis Velasco · Proyecto final de MLOps (AWS + ML)<br>Noviembre 2026 · Datos: CFPB Consumer Complaints</div>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <div class="card">
+        <h2>Problema</h2>
+        <p>Los equipos de soporte leen cada ticket para decidir <b>a qué área va</b> y <b>qué tan urgente es</b>. Es lento, inconsistente y retrasa los casos con daño activo: fraude, dinero retenido, remates.</p>
+      </div>
+      <div class="card">
+        <h2>Datos</h2>
+        <ul>
+          <li><b>CFPB Narratives Archive</b> (dominio público), 2024–2026, en inglés.</li>
+          <li><b>8 categorías</b> mapeadas desde el producto CFPB; desbalance tratado con <i>class weights</i>.</li>
+          <li><b>Prioridad</b> <code>urgent</code> / <code>not_urgent</code> destilada de Claude (2,000 tickets).</li>
+          <li><b>Golden set</b>: 100 tickets etiquetados a mano en Label Studio.</li>
+          <li>Splits <b>temporales</b>; tags <i>Older American</i> y <i>Servicemember</i> solo para medir equidad.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>Privacidad: PII redactada antes de todo</h2>
+        <div class="pii">Someone opened cards in my name. Reach me at <mark>XXXX</mark> or <mark>XXXX</mark>. My SSN is <mark>XXXX</mark>.</div>
+        <p class="note" style="margin-top:2mm">Email, teléfono, SSN, tarjeta (validada con Luhn) y cuenta. Misma máscara <code>XXXX</code> que el dataset: el modelo ve lo mismo que en entrenamiento.</p>
+      </div>
+      <div class="card">
+        <h2>MLOps</h2>
+        <ul>
+          <li>CI en GitHub Actions: ruff + bandit, <b>197 tests</b> (84% cobertura), Terraform validate, Trivy.</li>
+          <li>Modelos versionados e inmutables (hash de etiquetas, sha256, commit).</li>
+          <li>Caché de predicciones LLM: los experimentos no se pagan dos veces.</li>
+          <li>Infraestructura 100% Terraform, OIDC sin llaves estáticas.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card">
+        <h2>Solución: cascada de costo</h2>
+        <div class="flow">
+          <div class="step s-pii">PII<span>regex</span></div><div class="arrow">→</div>
+          <div class="step s-classic">Clásico<span>TF-IDF + SVM calibrado · 6 ms · $0</span></div><div class="arrow">→</div>
+          <div class="step s-jev">Jev<span>TypeSafe zero-shot · $0.00006</span></div><div class="arrow">→</div>
+          <div class="step s-claude">Claude Haiku 4.5<span>Bedrock · $0.0009</span></div>
+        </div>
+        <p>Cada nivel responde <b>solo si su confianza calibrada supera el umbral</b>; si no, escala. Los umbrales se eligieron como la opción <b>más barata</b> que mantiene la calidad de Claude. En prioridad, <code>not_urgent</code> exige confianza ≥ 0.9: <b>seguridad sobre costo</b>.</p>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><div class="big">0.762</div><small>macro-F1 categoría<br>(mejor que cada modelo solo)</small></div>
+        <div class="kpi"><div class="big">~20×</div><small>más barato que<br>usar solo Claude</small></div>
+        <div class="kpi"><div class="big">0.96</div><small>recall de casos<br>urgentes (val)</small></div>
+      </div>
+      <div class="card">
+        <h2>Benchmark · categoría, prueba temporal (n = 1,000)</h2>
+        <table>
+          <tr><th>Modelo</th><th>macro-F1 [IC 95%]</th><th>p95 ms</th><th>USD / 1k</th></tr>
+          <tr><td>Clásico</td><td>0.741 [0.712, 0.768]</td><td>6</td><td>0.000</td></tr>
+          <tr><td>Jev</td><td>0.737 [0.709, 0.762]</td><td>164</td><td>0.060</td></tr>
+          <tr><td>Claude Haiku 4.5</td><td>0.745 [0.716, 0.770]</td><td>741</td><td>0.946</td></tr>
+          <tr class="win"><td>Cascada</td><td>0.762 [0.732, 0.787]</td><td>155</td><td>0.048</td></tr>
+        </table>
+        <p class="note" style="margin-top:2mm">El clásico resuelve el 89% de los tickets, Jev el 7% y Claude el 4%.</p>
+      </div>
+      <div class="card">
+        <h2>Calidad contra costo</h2>
+        <img src="../figures/cascade_category.png" alt="Barrido de umbrales: macro-F1 contra costo" style="max-height:58mm; object-fit:contain">
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card">
+        <h2>Arquitectura en AWS</h2>
+        <ul>
+          <li><b>Lambda</b> (imagen <b>ECR</b>, FastAPI) con página web y API REST.</li>
+          <li><b>DynamoDB</b>: tickets con nivel, confianza, versión, latencia y costo.</li>
+          <li><b>Bedrock</b> (Claude) · <b>SSM</b> (secretos) · <b>S3</b> (datos y estado).</li>
+          <li><b>CloudWatch</b>: métricas, dashboard y alarmas → <b>SNS</b>; <b>Budgets</b>.</li>
+          <li>Si todos los niveles fallan, el ticket se guarda como <b>"sin clasificar"</b> y suena una alarma.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>Equidad medida</h2>
+        <table>
+          <tr><th>Grupo (prueba, clásico)</th><th>macro-F1</th></tr>
+          <tr><td>Older American (n=63)</td><td>0.735</td></tr>
+          <tr><td>Servicemember (n=94)</td><td>0.753</td></tr>
+          <tr><td>Sin tag (n=853)</td><td>0.737</td></tr>
+          <tr><td><b>Textos más cortos (Q1)</b></td><td><b style="color:var(--urgent)">0.640</b></td></tr>
+          <tr><td>Textos más largos (Q4)</td><td>0.789</td></tr>
+        </table>
+        <p class="note" style="margin-top:2mm">La brecha por tag es pequeña (0.017). La mayor es por <b>longitud</b> (0.149): quien escribe poco recibe peor servicio. El gate de CI usa bootstrap pareado para no confundir ruido con sesgo en grupos chicos.</p>
+      </div>
+      <div class="card">
+        <h2>Riesgos y mitigación</h2>
+        <ul>
+          <li><b>Sesgo heredado</b> del LLM maestro (κ = 0.54 con humanos) → golden humano y reportarlo.</li>
+          <li><b>Etiquetas ruidosas</b> (producto ≠ categoría real en 31%) → reentrenar con etiquetas humanas.</li>
+          <li><b>Sesgo de automatización</b> → confianza y nivel visibles; el humano decide.</li>
+          <li><b>Privacidad</b> → PII redactada antes de terceros; logs sin texto.</li>
+          <li><b>Datos públicos que se acaban</b>: la CFPB dejó de publicar narrativas en ago 2026.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Stack: Python 3.12 · scikit-learn · FastAPI · Terraform · GitHub Actions · AWS Lambda, ECR, DynamoDB, Bedrock, CloudWatch</span>
+    <span>Costo total del proyecto en AWS &lt; $10 USD</span>
+  </footer>
+</div>
+</body>
+</html>
