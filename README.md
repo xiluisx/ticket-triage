@@ -25,13 +25,7 @@ Categoría, prueba temporal (n = 1,000):
 
 ## Arquitectura desplegada
 
-```
-Navegador / cliente ──HTTPS + X-Api-Key──► Lambda Function URL
-                                             │
-                    Lambda "ticket-triage-api" (imagen ECR, FastAPI + Mangum)
-                    PII → cascada (clásico en la imagen → Jev → Bedrock) → DynamoDB
-                    métricas EMF → CloudWatch (dashboard, alarmas → SNS)
-```
+![Arquitectura desplegada](docs/figures/architecture.png)
 
 Servicios AWS: Lambda, ECR, DynamoDB, Bedrock, CloudWatch, SNS, SSM Parameter Store, S3, IAM (OIDC para GitHub Actions), Budgets y SES. Todo en Terraform (`infra/`).
 

@@ -6,7 +6,9 @@ cd "$(dirname "$0")/../docs/report"
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-cp reporte-final.md "$tmp/report.md"
+# Keep each heading / table label with what follows: break the page if < N lines remain.
+awk '/^## 2\.2 / {print "\\clearpage"} /^#+ / {print "\\FloatBarrier\\needspace{10\\baselineskip}"} /^\*\*[^*]+\*\*$/ {print "\\needspace{12\\baselineskip}"} {print}' \
+  reporte-final.md > "$tmp/report.md"
 {
   echo
   echo "Capturas de pantalla en orden cronológico (archivo \`docs/evidence/\`)."
@@ -24,5 +26,5 @@ cp reporte-final.md "$tmp/report.md"
 pandoc "$tmp/report.md" -o reporte-final.pdf \
   --pdf-engine=xelatex --resource-path=.:.. --toc \
   -V mainfont="DejaVu Sans" -V monofont="DejaVu Sans Mono" -V fontsize=10pt \
-  -V geometry:margin=2cm -V colorlinks=true -V linkcolor=blue -V toc-title="Contenido"
+  -V header-includes="\\usepackage{needspace}\\usepackage{placeins}" -V geometry:margin=2cm -V colorlinks=true -V linkcolor=blue -V toc-title="Contenido"
 echo "OK: docs/report/reporte-final.pdf"

@@ -133,20 +133,7 @@ El despliegue (CD) es un solo comando reproducible, `make api-deploy`: construye
 
 ## 6.1 Arquitectura desplegada
 
-```
- Navegador / cliente HTTP
-          │  HTTPS + X-Api-Key
-          ▼
- Lambda Function URL ──► Lambda "ticket-triage-api" (imagen ECR, FastAPI + Mangum)
-                           │  1. valida API key (hash SHA-256)
-                           │  2. redacta PII (regex: email, tel., SSN, tarjeta+Luhn, cuenta)
-                           │  3. cascada por tarea, ambas en paralelo:
-                           │       clásico (en la imagen) → Jev (TypeSafe) → Claude (Bedrock)
-                           │  4. guarda ticket → DynamoDB "ticket-triage-tickets"
-                           │  5. métricas EMF → CloudWatch → alarmas → SNS (email)
-                           ▼
-          SSM Parameter Store (key de Jev) · S3 (datos, estado Terraform) · Budgets
-```
+![Arquitectura desplegada en AWS](../figures/architecture.png){width=100%}
 
 Servicios AWS: **Lambda, ECR, DynamoDB, Bedrock, CloudWatch (Logs, métricas, alarmas), SNS, SSM, S3, IAM (OIDC), Budgets y SES** (dominio verificado).
 
